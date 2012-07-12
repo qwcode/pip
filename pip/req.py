@@ -36,7 +36,7 @@ PIP_DELETE_MARKER_FILENAME = 'pip-delete-this-directory.txt'
 class InstallRequirement(object):
 
     def __init__(self, req, comes_from, source_dir=None, editable=False,
-                 url=None, as_egg=False, update=True):
+                 url=None, as_egg=False, update=True, upgrade=False):
         self.extras = ()
         if isinstance(req, string_types):
             req = pkg_resources.Requirement.parse(req)
@@ -63,16 +63,17 @@ class InstallRequirement(object):
         # UninstallPathSet of uninstalled distribution (for possible rollback)
         self.uninstalled = None
         self.use_user_site = False
+        self.upgrade=upgrade
 
     @classmethod
-    def from_editable(cls, editable_req, comes_from=None, default_vcs=None):
+    def from_editable(cls, editable_req, comes_from=None, default_vcs=None, upgrade=False):
         name, url, extras_override = parse_editable(editable_req, default_vcs)
         if url.startswith('file:'):
             source_dir = url_to_path(url)
         else:
             source_dir = None
 
-        res = cls(name, comes_from, source_dir=source_dir, editable=True, url=url)
+        res = cls(name, comes_from, source_dir=source_dir, editable=True, url=url, upgrade=upgrade)
 
         if extras_override is not None:
             res.extras = extras_override
@@ -80,7 +81,7 @@ class InstallRequirement(object):
         return res
 
     @classmethod
-    def from_line(cls, name, comes_from=None):
+    def from_line(cls, name, comes_from=None, upgrade=False):
         """Creates an InstallRequirement from a name, which might be a
         requirement, directory containing 'setup.py', filename, or URL.
         """
@@ -114,7 +115,7 @@ class InstallRequirement(object):
         else:
             req = name
 
-        return cls(req, comes_from, url=url)
+        return cls(req, comes_from, url=url, upgrade=upgrade)
 
     def __str__(self):
         if self.req:
@@ -808,13 +809,13 @@ class Requirements(object):
 class RequirementSet(object):
 
     def __init__(self, build_dir, src_dir, download_dir, download_cache=None,
-                 upgrade=False, ignore_installed=False, as_egg=False,
+                 upgrade_recursive=False, ignore_installed=False, as_egg=False,
                  ignore_dependencies=False, force_reinstall=False, use_user_site=False):
         self.build_dir = build_dir
         self.src_dir = src_dir
         self.download_dir = download_dir
         self.download_cache = download_cache
-        self.upgrade = upgrade
+        self.upgrade_recursive = upgrade_recursive
         self.ignore_installed = ignore_installed
         self.force_reinstall = force_reinstall
         self.requirements = Requirements()
@@ -908,7 +909,7 @@ class RequirementSet(object):
             if not self.ignore_installed and not req_to_install.editable:
                 req_to_install.check_if_exists()
                 if req_to_install.satisfied_by:
-                    if self.upgrade:
+                    if req_to_install.upgrade:
                         req_to_install.conflicts_with = req_to_install.satisfied_by
                         req_to_install.satisfied_by = None
                     else:
@@ -946,11 +947,11 @@ class RequirementSet(object):
             if not self.ignore_installed and not req_to_install.editable:
                 req_to_install.check_if_exists()
                 if req_to_install.satisfied_by:
-                    if self.upgrade:
+                    if req_to_install.upgrade:
                         if not self.force_reinstall and not req_to_install.url:
                             try:
                                 url = finder.find_requirement(
-                                    req_to_install, self.upgrade)
+                                    req_to_install, req_to_install.upgrade)
                             except BestVersionAlreadyInstalled:
                                 best_installed = True
                                 install = False
@@ -1012,7 +1013,7 @@ class RequirementSet(object):
                         if req_to_install.url is None:
                             if not_found:
                                 raise not_found
-                            url = finder.find_requirement(req_to_install, upgrade=self.upgrade)
+                            url = finder.find_requirement(req_to_install, upgrade=req_to_install.upgrade)
                         else:
                             ## FIXME: should req_to_install.url already be a link?
                             url = Link(req_to_install.url)
@@ -1057,7 +1058,7 @@ class RequirementSet(object):
                         # repeat check_if_exists to uninstall-on-upgrade (#14)
                         req_to_install.check_if_exists()
                         if req_to_install.satisfied_by:
-                            if self.upgrade or self.ignore_installed:
+                            if req_to_install.upgrade or self.ignore_installed:
                                 req_to_install.conflicts_with = req_to_install.satisfied_by
                                 req_to_install.satisfied_by = None
                             else:
@@ -1079,7 +1080,7 @@ class RequirementSet(object):
                             if self.has_requirement(name):
                                 ## FIXME: check for conflict
                                 continue
-                            subreq = InstallRequirement(req, req_to_install)
+                            subreq = InstallRequirement(req, req_to_install, upgrade=self.upgrade_recursive)
                             reqs.append(subreq)
                             self.add_requirement(subreq)
                     if req_to_install.name not in self.requirements:
@@ -1322,6 +1323,7 @@ def parse_requirements(filename, finder=None, comes_from=None, options=None):
             if finder:
                 finder.index_urls.append(line)
         else:
+            upgrade = options.upgrade or options.upgrade_recursive
             comes_from = '-r %s (line %s)' % (filename, line_number)
             if line.startswith('-e') or line.startswith('--editable'):
                 if line.startswith('-e'):
@@ -1329,9 +1331,9 @@ def parse_requirements(filename, finder=None, comes_from=None, options=None):
                 else:
                     line = line[len('--editable'):].strip().lstrip('=')
                 req = InstallRequirement.from_editable(
-                    line, comes_from=comes_from, default_vcs=options.default_vcs)
+                    line, comes_from=comes_from, default_vcs=options.default_vcs, upgrade=upgrade)
             else:
-                req = InstallRequirement.from_line(line, comes_from)
+                req = InstallRequirement.from_line(line, comes_from, upgrade=upgrade)
             yield req
 
 
