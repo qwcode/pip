@@ -479,7 +479,7 @@ class FastTestPipEnvironment(TestPipEnvironment):
         self.use_distribute = os.environ.get('PIP_TEST_USE_DISTRIBUTE', False)
 
         if self.root_path.exists:
-            self.run('ls', self.root_path)
+            self.run('ls', 'S:\Users\slave\Jenkins\workspace\pip_cpython27_win')
             rmtree(self.root_path)
         if self.backup_path.exists:
             shutil.copytree(self.backup_path, self.root_path, True)
