@@ -479,8 +479,9 @@ class FastTestPipEnvironment(TestPipEnvironment):
         self.use_distribute = os.environ.get('PIP_TEST_USE_DISTRIBUTE', False)
 
         if self.root_path.exists:
-            if not os.path.exists(str(self.root_path)):
-                raise Exception("bogus")
+            for dirpath, dirnames, filenames in os.walk(self.root_path):
+                for f in filenames:
+                    print dirpath, f
             rmtree(self.root_path)
         if self.backup_path.exists:
             shutil.copytree(self.backup_path, self.root_path, True)
@@ -519,6 +520,7 @@ class FastTestPipEnvironment(TestPipEnvironment):
             # Install this version instead
             self.run('python', 'setup.py', 'install', cwd=src_folder, expect_stderr=True)
             shutil.copytree(self.root_path, self.backup_path, True)
+
 
         #create sitecustomize.py and add patches
         self._create_empty_sitecustomize()
