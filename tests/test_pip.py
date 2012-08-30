@@ -480,7 +480,7 @@ class FastTestPipEnvironment(TestPipEnvironment):
 
         if self.root_path.exists:
             print "walking..."
-            self.run('rm', '-rf', os.path.join(str(self.root_path), 'tmp') )
+            self.run('rm', '-rf', 'tmp')
             for dirpath, dirnames, filenames in os.walk(self.root_path):
                 print str(dirnames)
                 for f in filenames:
