@@ -479,7 +479,7 @@ class FastTestPipEnvironment(TestPipEnvironment):
         self.use_distribute = os.environ.get('PIP_TEST_USE_DISTRIBUTE', False)
 
         if self.root_path.exists:
-            self.run('find', root_path)
+            self.run('find', self.root_path)
             rmtree(self.root_path)
         if self.backup_path.exists:
             shutil.copytree(self.backup_path, self.root_path, True)
