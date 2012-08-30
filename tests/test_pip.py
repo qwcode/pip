@@ -479,7 +479,9 @@ class FastTestPipEnvironment(TestPipEnvironment):
         self.use_distribute = os.environ.get('PIP_TEST_USE_DISTRIBUTE', False)
 
         if self.root_path.exists:
+            print "walking..."
             for dirpath, dirnames, filenames in os.walk(self.root_path):
+                print str(dirnames)
                 for f in filenames:
                     print dirpath, f
             rmtree(self.root_path)
