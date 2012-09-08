@@ -15,6 +15,7 @@ from pip.util import (splitext, rmtree, format_size, display_path,
                       create_download_cache_folder, cache_download)
 from pip.vcs import vcs
 from pip.log import logger
+from pip import util
 
 
 __all__ = ['xmlrpclib_transport', 'get_file_content', 'urlopen',
@@ -351,6 +352,7 @@ def _get_hash_from_file(target_file, link):
 
 
 def _download_url(resp, link, temp_location):
+    util.event_begin('download')
     fp = open(temp_location, 'wb')
     download_hash = None
     if link.hash and link.hash_name:
@@ -393,6 +395,7 @@ def _download_url(resp, link, temp_location):
     finally:
         if show_progress:
             logger.end_progress('%s downloaded' % format_size(downloaded))
+    util.event_end('download')
     return download_hash
 
 

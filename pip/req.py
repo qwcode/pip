@@ -8,6 +8,8 @@ import shutil
 import tempfile
 import zipfile
 
+from pip import util
+
 from pip.locations import bin_py, running_under_virtualenv
 from pip.exceptions import (InstallationError, UninstallationError,
                             BestVersionAlreadyInstalled,
@@ -390,11 +392,13 @@ exec(compile(open(__file__).read().replace('\\r\\n', '\\n'), __file__, 'exec'))
         vc_type, url = self.url.split('+', 1)
         backend = vcs.get_backend(vc_type)
         if backend:
+            util.event_begin('vcs')
             vcs_backend = backend(self.url)
             if obtain:
                 vcs_backend.obtain(self.source_dir)
             else:
                 vcs_backend.export(self.source_dir)
+            util.event_end('vcs')
         else:
             assert 0, (
                 'Unexpected version control type (in %s): %s'
@@ -585,8 +589,10 @@ exec(compile(open(__file__).read().replace('\\r\\n', '\\n'), __file__, 'exec'))
             logger.notify('Running setup.py install for %s' % self.name)
             logger.indent += 2
             try:
+                util.event_begin('install')
                 call_subprocess(install_args + install_options,
                     cwd=self.source_dir, filter_stdout=self._filter_install, show_stdout=False)
+                util.event_end('install')
             finally:
                 logger.indent -= 2
             if not os.path.exists(record_filename):
@@ -643,6 +649,7 @@ exec(compile(open(__file__).read().replace('\\r\\n', '\\n'), __file__, 'exec'))
         logger.indent += 2
         try:
             ## FIXME: should we do --install-headers here too?
+            util.event_begin('install-dev')
             call_subprocess(
                 [sys.executable, '-c',
                  "import setuptools; __file__=%r; exec(compile(open(__file__).read().replace('\\r\\n', '\\n'), __file__, 'exec'))" % self.setup_py]
@@ -650,6 +657,7 @@ exec(compile(open(__file__).read().replace('\\r\\n', '\\n'), __file__, 'exec'))
 
                 cwd=self.source_dir, filter_stdout=self._filter_install,
                 show_stdout=False)
+            util.event_end('install-dev')
         finally:
             logger.indent -= 2
         self.install_succeeded = True
@@ -1133,13 +1141,17 @@ class RequirementSet(object):
         else:
             loc = location
         if is_vcs_url(link):
+            util.event_begin('vcs-download')
             return unpack_vcs_link(link, loc, only_download)
+            util.event_end('vcs-download')
         elif is_file_url(link):
             return unpack_file_url(link, loc)
         else:
             if self.download_cache:
                 self.download_cache = os.path.expanduser(self.download_cache)
+            util.event_begin('http_url')
             retval = unpack_http_url(link, location, self.download_cache, self.download_dir)
+            util.event_end('http_url')
             if only_download:
                 _write_delete_marker_message(os.path.join(location, PIP_DELETE_MARKER_FILENAME))
             return retval
@@ -1269,6 +1281,8 @@ _scheme_re = re.compile(r'^(http|https|file):', re.I)
 
 
 def parse_requirements(filename, finder=None, comes_from=None, options=None):
+    util.event_begin('parse')
+
     skip_match = None
     skip_regex = options.skip_requirements_regex if options else None
     if skip_regex:
@@ -1329,6 +1343,7 @@ def parse_requirements(filename, finder=None, comes_from=None, options=None):
             else:
                 req = InstallRequirement.from_line(line, comes_from)
             yield req
+    util.event_end('parse')
 
 
 def parse_editable(editable_req, default_vcs=None):

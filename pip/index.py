@@ -25,6 +25,7 @@ from pip.backwardcompat import (WindowsError, BytesIO,
                                 product, url2pathname)
 from pip.backwardcompat import Empty as QueueEmpty
 from pip.download import urlopen, path_to_url2, url_to_path, geturl, Urllib2HeadRequest
+from pip import util
 
 __all__ = ['PackageFinder']
 
@@ -92,6 +93,7 @@ class PackageFinder(object):
         return files, urls
 
     def find_requirement(self, req, upgrade):
+        util.event_begin('locate')
         url_name = req.url_name
         # Only check main index if index URL is given:
         main_index_url = None
@@ -192,6 +194,7 @@ class PackageFinder(object):
         if len(applicable_versions) > 1:
             logger.info('Using version %s (newest of versions: %s)' %
                         (applicable_versions[0][1], ', '.join([version for link, version in applicable_versions])))
+        util.event_end('locate')
         return applicable_versions[0][0]
 
     def _find_url_name(self, index_url, url_name, req):

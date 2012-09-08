@@ -616,3 +616,30 @@ def call_subprocess(cmd, show_stdout=True,
                 % (command_desc, proc.returncode, cwd))
     if stdout is not None:
         return ''.join(all_output)
+
+
+EVENT = {}
+TIMES = {}
+from datetime import datetime
+
+def event_begin(event):
+    global EVENT
+    EVENT[event] = datetime.now()
+
+def event_end(event):
+    global EVENT, TIMES
+    begin = EVENT[event]
+    end = datetime.now()
+    TIMES[event] = TIMES.setdefault(event, end-end) + end - begin
+
+def event_report():
+    events = sorted([(t,e) for e, t in TIMES.items()])
+    events.reverse()
+    for t, e in events:
+        print e, t
+
+
+
+
+
+

@@ -10,6 +10,7 @@ from pip.basecommand import Command
 from pip.index import PackageFinder
 from pip.exceptions import InstallationError, CommandError
 from pip.backwardcompat import home_lib
+from pip import util
 
 
 class InstallCommand(Command):
@@ -184,6 +185,9 @@ class InstallCommand(Command):
                              mirrors=options.mirrors)
 
     def run(self, options, args):
+
+        util.event_begin('all')
+
         if options.download_dir:
             options.no_install = True
             options.ignore_installed = True
@@ -284,6 +288,11 @@ class InstallCommand(Command):
                     os.path.join(options.target_dir, item)
                     )
             shutil.rmtree(temp_target_dir)
+
+        util.event_end('all')
+
+        util.event_report()
+
         return requirement_set
 
 
