@@ -1035,6 +1035,7 @@ class RequirementSet(object):
                         else:
                             unpack = False
                     if unpack:
+                        util.event_begin('unpack')
                         is_bundle = req_to_install.is_bundle
                         if is_bundle:
                             req_to_install.move_bundle_files(self.build_dir, self.src_dir)
@@ -1067,6 +1068,7 @@ class RequirementSet(object):
                                 req_to_install.satisfied_by = None
                             else:
                                 install = False
+                        util.event_end('unpack')
                 if not is_bundle:
                     ## FIXME: shouldn't be globally added:
                     finder.add_dependency_links(req_to_install.dependency_links)
