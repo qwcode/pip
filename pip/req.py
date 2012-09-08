@@ -935,6 +935,7 @@ class RequirementSet(object):
 
     def prepare_files(self, finder, force_root_egg_info=False, bundle=False):
         """Prepare process. Create temp directories, download and/or unpack files."""
+        util.event_begin('prepare')
         unnamed = list(self.unnamed_requirements)
         reqs = list(self.requirements.values())
         while reqs or unnamed:
@@ -1099,6 +1100,7 @@ class RequirementSet(object):
                         self.copy_to_build_dir(req_to_install)
             finally:
                 logger.indent -= 2
+        util.event_end('prepare')
 
     def cleanup_files(self, bundle=False):
         """Clean up files, remove builds."""
