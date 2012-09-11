@@ -1105,6 +1105,7 @@ class RequirementSet(object):
         util.event_end('prepare')
 
     def cleanup_files(self, bundle=False):
+        util.event_begin("clean")
         """Clean up files, remove builds."""
         logger.notify('Cleaning up...')
         logger.indent += 2
@@ -1126,6 +1127,7 @@ class RequirementSet(object):
                 rmtree(dir)
 
         logger.indent -= 2
+        util.event_end("clean")
 
     def _pip_has_created_build_dir(self):
         return (self.build_dir == build_prefix and
