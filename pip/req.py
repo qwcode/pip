@@ -212,6 +212,7 @@ class InstallRequirement(object):
         return os.path.join(self.source_dir, 'setup.py')
 
     def run_egg_info(self, force_root_egg_info=False):
+        util.event_begin("run_egg_info")
         assert self.source_dir
         if self.name:
             logger.notify('Running setup.py egg_info for package %s' % self.name)
@@ -242,6 +243,7 @@ class InstallRequirement(object):
             self.req = pkg_resources.Requirement.parse(
                 "%(Name)s==%(Version)s" % self.pkg_info())
             self.correct_build_location()
+        util.event_end("run_egg_info")
 
     ## FIXME: This is a lame hack, entirely for PasteScript which has
     ## a self-provided entry point that causes this awkwardness
@@ -1035,7 +1037,6 @@ class RequirementSet(object):
                         else:
                             unpack = False
                     if unpack:
-                        util.event_begin('unpack')
                         is_bundle = req_to_install.is_bundle
                         if is_bundle:
                             req_to_install.move_bundle_files(self.build_dir, self.src_dir)
@@ -1068,7 +1069,6 @@ class RequirementSet(object):
                                 req_to_install.satisfied_by = None
                             else:
                                 install = False
-                        util.event_end('unpack')
                 if not is_bundle:
                     ## FIXME: shouldn't be globally added:
                     finder.add_dependency_links(req_to_install.dependency_links)
@@ -1153,9 +1153,9 @@ class RequirementSet(object):
         else:
             if self.download_cache:
                 self.download_cache = os.path.expanduser(self.download_cache)
-            util.event_begin('http_url')
+            util.event_begin('unpack_http_url')
             retval = unpack_http_url(link, location, self.download_cache, self.download_dir)
-            util.event_end('http_url')
+            util.event_end('unpack_http_url')
             if only_download:
                 _write_delete_marker_message(os.path.join(location, PIP_DELETE_MARKER_FILENAME))
             return retval
