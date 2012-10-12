@@ -1,6 +1,8 @@
 pip
 ===
 
+test
+
 `pip` is a tool for installing and managing Python packages, such as
 those found in the `Python Package Index`_. It's a replacement for
 easy_install_.
