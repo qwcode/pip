@@ -9,6 +9,102 @@ from pip.backwardcompat import ConfigParser, string_types
 from pip.locations import default_config_file, default_log_file
 from pip.util import get_terminal_size, get_prog
 
+base_options = [
+    optparse.make_option(
+        # Run only if inside a virtualenv, bail if not.
+        '--require-virtualenv', '--require-venv',
+        dest='require_venv',
+        action='store_true',
+        default=False,
+        help=optparse.SUPPRESS_HELP),
+    optparse.make_option(
+        '-v', '--verbose',
+        dest='verbose',
+        action='count',
+        default=0,
+        help='Give more output'),
+    optparse.make_option(
+        '-V', '--version',
+        dest='version',
+        action='store_true',
+        help='Show version and exit'),
+    optparse.make_option(
+        '-q', '--quiet',
+        dest='quiet',
+        action='count',
+        default=0,
+        help='Give less output'),
+    optparse.make_option(
+        '--log',
+        dest='log',
+        metavar='FILENAME',
+        help='Log file where a complete (maximum verbosity) record will be kept'),
+    optparse.make_option(
+        # Writes the log levels explicitely to the log'
+        '--log-explicit-levels',
+        dest='log_explicit_levels',
+        action='store_true',
+        default=False,
+        help=optparse.SUPPRESS_HELP),
+    optparse.make_option(
+        # The default log file
+        '--local-log', '--log-file',
+        dest='log_file',
+        metavar='FILENAME',
+        default=default_log_file,
+        help=optparse.SUPPRESS_HELP),
+    optparse.make_option(
+        # Don't ask for input
+        '--no-input',
+        dest='no_input',
+        action='store_true',
+        default=False,
+        help=optparse.SUPPRESS_HELP),
+    optparse.make_option(
+        '--proxy',
+        dest='proxy',
+        type='str',
+        default='',
+        help="Specify a proxy in the form user:passwd@proxy.server:port. "
+        "Note that the user:password@ is optional and required only if you "
+        "are behind an authenticated proxy. If you provide "
+        "user@proxy.server:port then you will be prompted for a password."),
+    optparse.make_option(
+        '--timeout', '--default-timeout',
+        metavar='SECONDS',
+        dest='timeout',
+        type='float',
+        default=15,
+        help='Set the socket timeout (default %default seconds)'),
+    optparse.make_option(
+        # The default version control system for editables, e.g. 'svn'
+        '--default-vcs',
+        dest='default_vcs',
+        type='str',
+        default='',
+        help=optparse.SUPPRESS_HELP),
+    optparse.make_option(
+        # A regex to be used to skip requirements
+        '--skip-requirements-regex',
+        dest='skip_requirements_regex',
+        type='str',
+        default='',
+        help=optparse.SUPPRESS_HELP),
+    optparse.make_option(
+        # Option when path already exist
+        '--exists-action',
+        dest='exists_action',
+        type='choice',
+        choices=['s', 'i', 'w', 'b'],
+        default=[],
+        action='append',
+        help="Default action when a path already exists. "
+             "Use this option more than one time to specify "
+             "another action if a certain option is not "
+             "available. Choices: "
+             "(s)witch, (i)gnore, (w)ipe, (b)ackup"),
+    ]
+
 
 class PrettyHelpFormatter(optparse.IndentedHelpFormatter):
     """A prettier/less verbose help formatter for optparse."""
@@ -211,102 +307,8 @@ def create_main_parser():
         dest='help',
         action='store_true',
         help='Show help')
-    parser.add_option(
-        # Run only if inside a virtualenv, bail if not.
-        '--require-virtualenv', '--require-venv',
-        dest='require_venv',
-        action='store_true',
-        default=False,
-        help=optparse.SUPPRESS_HELP)
 
-    parser.add_option(
-        '-v', '--verbose',
-        dest='verbose',
-        action='count',
-        default=0,
-        help='Give more output')
-    parser.add_option(
-        '-V', '--version',
-        dest='version',
-        action='store_true',
-        help='Show version and exit')
-    parser.add_option(
-        '-q', '--quiet',
-        dest='quiet',
-        action='count',
-        default=0,
-        help='Give less output')
-    parser.add_option(
-        '--log',
-        dest='log',
-        metavar='FILENAME',
-        help='Log file where a complete (maximum verbosity) record will be kept')
-    parser.add_option(
-        # Writes the log levels explicitely to the log'
-        '--log-explicit-levels',
-        dest='log_explicit_levels',
-        action='store_true',
-        default=False,
-        help=optparse.SUPPRESS_HELP)
-    parser.add_option(
-        # The default log file
-        '--local-log', '--log-file',
-        dest='log_file',
-        metavar='FILENAME',
-        default=default_log_file,
-        help=optparse.SUPPRESS_HELP)
-    parser.add_option(
-        # Don't ask for input
-        '--no-input',
-        dest='no_input',
-        action='store_true',
-        default=False,
-        help=optparse.SUPPRESS_HELP)
-
-    parser.add_option(
-        '--proxy',
-        dest='proxy',
-        type='str',
-        default='',
-        help="Specify a proxy in the form user:passwd@proxy.server:port. "
-        "Note that the user:password@ is optional and required only if you "
-        "are behind an authenticated proxy. If you provide "
-        "user@proxy.server:port then you will be prompted for a password.")
-    parser.add_option(
-        '--timeout', '--default-timeout',
-        metavar='SECONDS',
-        dest='timeout',
-        type='float',
-        default=15,
-        help='Set the socket timeout (default %default seconds)')
-    parser.add_option(
-        # The default version control system for editables, e.g. 'svn'
-        '--default-vcs',
-        dest='default_vcs',
-        type='str',
-        default='',
-        help=optparse.SUPPRESS_HELP)
-    parser.add_option(
-        # A regex to be used to skip requirements
-        '--skip-requirements-regex',
-        dest='skip_requirements_regex',
-        type='str',
-        default='',
-        help=optparse.SUPPRESS_HELP)
-
-    parser.add_option(
-        # Option when path already exist
-        '--exists-action',
-        dest='exists_action',
-        type='choice',
-        choices=['s', 'i', 'w', 'b'],
-        default=[],
-        action='append',
-        help="Default action when a path already exists. "
-             "Use this option more than one time to specify "
-             "another action if a certain option is not "
-             "available. Choices: "
-             "(s)witch, (i)gnore, (w)ipe, (b)ackup")
+    map(parser.add_option, base_options)
 
     return parser
 

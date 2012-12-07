@@ -147,7 +147,7 @@ def main(initial_args=None):
         sys.stderr.write(os.linesep)
         sys.exit(1)
 
-    command = commands[cmd_name](parser)  # see baseparser.Command
+    command = commands[cmd_name]()  # see baseparser.Command
     return command.main(args[1:], options)
 
 
