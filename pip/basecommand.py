@@ -38,7 +38,10 @@ class Command(object):
             'name' : self.name,
         }
         self.parser = ConfigOptionParser(**parser_kw)
-        map(self.parser.add_option, base_options)
+        #map() behaves differently in py3x
+        #map(self.parser.add_option, base_options)
+        for option in base_options:
+            self.parser.add_option(option)
 
     def merge_options(self, initial_options, options):
         # Make sure we have all global options carried over

@@ -308,7 +308,10 @@ def create_main_parser():
         action='store_true',
         help='Show help')
 
-    map(parser.add_option, base_options)
+    #map() behaves differently in py3x
+    #map(parser.add_option, base_options)
+    for option in base_options:
+        parser.add_option(option)
 
     return parser
 
