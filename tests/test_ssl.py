@@ -64,6 +64,7 @@ class Tests_py25:
         env = reset_env(allow_no_ssl=True)
         #expect error because ssl's setup.py is hard coded to install test data to global prefix
         result = run_pip('install', 'ssl', expect_error=True)
+        assert os.path.isfile('/usr/include/krb5.h')
         assert False, result.stdout
 
         #set it back to false
