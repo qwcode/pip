@@ -12,6 +12,34 @@ from pip.exceptions import PipError
 pypi_https = 'https://pypi.python.org/simple/'
 pypi_http = 'http://pypi.python.org/simple/'
 
+def find_file(filename, std_dirs, paths):
+    """Searches for the directory where a given file is located,
+    and returns a possibly-empty list of additional directories, or None
+    if the file couldn't be found at all.
+
+    'filename' is the name of a file, such as readline.h or libcrypto.a.
+    'std_dirs' is the list of standard system directories; if the
+        file is found in one of them, no additional directives are needed.
+    'paths' is a list of additional locations to check; if the file is
+        found in one of them, the resulting list will contain the directory.
+    """
+
+    # Check the standard locations
+    for dir in std_dirs:
+        f = os.path.join(dir, filename)
+        print 'looking for', f
+        if os.path.exists(f): return []
+
+    # Check the additional directories
+    for dir in paths:
+        f = os.path.join(dir, filename)
+        print 'looking for', f
+        if os.path.exists(f):
+            return [dir]
+
+    # Not found anywhere
+    return None
+
 def find_library_file(compiler, libname, std_dirs, paths):
     result = compiler.find_library_file(std_dirs + paths, libname)
     if result is None:
