@@ -68,6 +68,7 @@ class Tests_py25:
         #set it back to false
         env.environ['PIP_ALLOW_NO_SSL'] = ''
         result = run_pip('install', 'INITools', expect_error=True)
+        print result.stdout
         result.assert_installed('initools', editable=False)
 
 
