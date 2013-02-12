@@ -12,6 +12,32 @@ from pip.exceptions import PipError
 pypi_https = 'https://pypi.python.org/simple/'
 pypi_http = 'http://pypi.python.org/simple/'
 
+def find_library_file(compiler, libname, std_dirs, paths):
+    result = compiler.find_library_file(std_dirs + paths, libname)
+    if result is None:
+        return None
+
+    # Check whether the found file is in one of the standard directories
+    dirname = os.path.dirname(result)
+    print dirname
+    for p in std_dirs:
+        # Ensure path doesn't end with path separator
+        p = p.rstrip(os.sep)
+        if p == dirname:
+            print "return"
+            return [ ]
+
+    # Otherwise, it must have been in one of the additional directories,
+    # so we have to figure out which one.
+    for p in paths:
+        # Ensure path doesn't end with path separator
+        p = p.rstrip(os.sep)
+        if p == dirname:
+            return [p]
+    else:
+        assert False, "Internal error: Path not found in std_dirs or paths"
+
+
 class Tests_py25:
     """py25 tests"""
 
@@ -60,18 +86,48 @@ class Tests_py25:
         """
         Test installing with ssl backport
         """
-        # allow_no_ssl=True so we can install ssl first
-        env = reset_env(allow_no_ssl=True)
-        #expect error because ssl's setup.py is hard coded to install test data to global prefix
-        result = run_pip('install', 'ssl', expect_error=True)
-        assert os.path.isfile('/usr/include/krb5.h')
-        assert False, result.stdout
 
-        #set it back to false
-        env.environ['PIP_ALLOW_NO_SSL'] = ''
-        result = run_pip('install', 'INITools', expect_error=True)
-        assert False, result.stdout
-        result.assert_installed('initools', editable=False)
+        # Detect SSL support for the socket module (via _ssl)
+        from distutils.ccompiler import new_compiler
+
+        compiler = new_compiler()
+        inc_dirs = compiler.include_dirs + ['/usr/include']
+
+        search_for_ssl_incs_in = [
+                              '/usr/local/ssl/include',
+                              '/usr/contrib/ssl/include/'
+                             ]
+        ssl_incs = find_file('openssl/ssl.h', inc_dirs,
+                             search_for_ssl_incs_in
+                             )
+        if ssl_incs is not None:
+            krb5_h = find_file('krb5.h', inc_dirs,
+                               ['/usr/kerberos/include'])
+            if krb5_h:
+                ssl_incs += krb5_h
+
+        ssl_libs = find_library_file(compiler, 'ssl',
+                                     ['/usr/lib'],
+                                     ['/usr/local/lib',
+                                      '/usr/local/ssl/lib',
+                                      '/usr/contrib/ssl/lib/'
+                                     ] )
+
+        assert ssl_libs
+
+
+        # # allow_no_ssl=True so we can install ssl first
+        # env = reset_env(allow_no_ssl=True)
+        # #expect error because ssl's setup.py is hard coded to install test data to global prefix
+        # result = run_pip('install', 'ssl', expect_error=True)
+        # assert os.path.isfile('/usr/include/krb5.h')
+        # assert False, result.stdout
+
+        # #set it back to false
+        # env.environ['PIP_ALLOW_NO_SSL'] = ''
+        # result = run_pip('install', 'INITools', expect_error=True)
+        # assert False, result.stdout
+        # result.assert_installed('initools', editable=False)
 
 
 class Tests_not_py25:
