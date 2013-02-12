@@ -43,6 +43,7 @@ def find_file(filename, std_dirs, paths):
 def find_library_file(compiler, libname, std_dirs, paths):
     result = compiler.find_library_file(std_dirs + paths, libname)
     if result is None:
+        print "no compiler"
         return None
 
     # Check whether the found file is in one of the standard directories
