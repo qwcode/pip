@@ -9,5 +9,6 @@ script: nosetests -s -v tests.test_ssl:Tests_py25.test_install_with_ssl_backport
 branches:
   only:
     - ssl_cert_test
+    - ssl_cert_test2
 env:
   - PIP_USE_MIRRORS=true
