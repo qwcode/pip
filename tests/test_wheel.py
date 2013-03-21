@@ -6,6 +6,7 @@ import urllib
 
 from nose import SkipTest
 from pip import wheel
+from pip.download import path_to_url as path_to_url_d
 from tests.test_pip import here, reset_env, run_pip, pyversion_nodot, write_file, path_to_url
 
 
@@ -96,8 +97,10 @@ class TestPipWheel:
         assert "Failed to build" not in result.stdout, result.stdout
         assert "ignoring %s" % local_wheel in result.stdout
         ignore_editable = "ignoring %s" % path_to_url(local_editable)
-        ignore_editable_quoted = "ignoring %s" % urllib.quote((path_to_url(local_editable)))
-        assert (ignore_editable in result.stdout or ignore_editable_quoted in result.stdout), result.stdout
+        #TODO: understand this divergence
+        if sys.platform == 'win32':
+            ignore_editable = "ignoring %s" % path_to_url_d(local_editable)
+        assert ignore_editable in result.stdout, result.stdout
 
 
     def test_pip_wheel_unpack_only(self):
