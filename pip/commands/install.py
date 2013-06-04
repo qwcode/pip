@@ -4,11 +4,11 @@ import tempfile
 import shutil
 from pip.req import InstallRequirement, RequirementSet, parse_requirements
 from pip.log import logger
-from pip.locations import src_prefix, virtualenv_no_global
+from pip.locations import src_prefix, virtualenv_no_global, distutils_scheme
+from pip.backwardcompat import install_skip_reqs
 from pip.basecommand import Command
 from pip.index import PackageFinder
 from pip.exceptions import InstallationError, CommandError
-from pip.backwardcompat import home_lib
 from pip import cmdoptions
 
 
@@ -67,7 +67,7 @@ class InstallCommand(Command):
             dest='download_dir',
             metavar='dir',
             default=None,
-            help="Download packages into <dir> instead of installing them, irregardless of what's already installed.")
+            help="Download packages into <dir> instead of installing them, regardless of what's already installed.")
 
         cmd_opts.add_option(cmdoptions.download_cache)
 
@@ -85,7 +85,7 @@ class InstallCommand(Command):
             dest='upgrade',
             action='store_true',
             help='Upgrade all packages to the newest available version. '
-            'This process is recursive irregardless of whether a dependency is already satisfied.')
+            'This process is recursive regardless of whether a dependency is already satisfied.')
 
         cmd_opts.add_option(
             '--force-reinstall',
@@ -145,6 +145,8 @@ class InstallCommand(Command):
             default=False,
             help="Include pre-release and development versions. By default, pip only finds stable versions.")
 
+        cmd_opts.add_option(cmdoptions.no_clean)
+
         index_opts = cmdoptions.make_option_group(cmdoptions.index_group, self.parser)
 
         self.parser.insert_option_group(0, index_opts)
@@ -202,7 +204,8 @@ class InstallCommand(Command):
             ignore_dependencies=options.ignore_dependencies,
             force_reinstall=options.force_reinstall,
             use_user_site=options.use_user_site,
-            target_dir=temp_target_dir)
+            target_dir=temp_target_dir,
+            skip_reqs=install_skip_reqs)
         for name in args:
             requirement_set.add_requirement(
                 InstallRequirement.from_line(name, None, prereleases=options.pre))
@@ -224,10 +227,6 @@ class InstallCommand(Command):
             logger.warn(msg)
             return
 
-        if (options.use_user_site and
-            sys.version_info < (2, 6)):
-            raise InstallationError('--user is only supported in Python version 2.6 and newer')
-
         import setuptools
         if (options.use_user_site and
             requirement_set.has_editables and
@@ -235,32 +234,35 @@ class InstallCommand(Command):
 
             raise InstallationError('--user --editable not supported with setuptools, use distribute')
 
-        if not options.no_download:
-            requirement_set.prepare_files(finder, force_root_egg_info=self.bundle, bundle=self.bundle)
-        else:
-            requirement_set.locate_files()
+        try:
+            if not options.no_download:
+                requirement_set.prepare_files(finder, force_root_egg_info=self.bundle, bundle=self.bundle)
+            else:
+                requirement_set.locate_files()
 
-        if not options.no_install and not self.bundle:
-            requirement_set.install(install_options, global_options, root=options.root_path)
-            installed = ' '.join([req.name for req in
-                                  requirement_set.successfully_installed])
-            if installed:
-                logger.notify('Successfully installed %s' % installed)
-        elif not self.bundle:
-            downloaded = ' '.join([req.name for req in
-                                   requirement_set.successfully_downloaded])
-            if downloaded:
-                logger.notify('Successfully downloaded %s' % downloaded)
-        elif self.bundle:
-            requirement_set.create_bundle(self.bundle_filename)
-            logger.notify('Created bundle in %s' % self.bundle_filename)
-        # Clean up
-        if not options.no_install or options.download_dir:
-            requirement_set.cleanup_files(bundle=self.bundle)
+            if not options.no_install and not self.bundle:
+                requirement_set.install(install_options, global_options, root=options.root_path)
+                installed = ' '.join([req.name for req in
+                                      requirement_set.successfully_installed])
+                if installed:
+                    logger.notify('Successfully installed %s' % installed)
+            elif not self.bundle:
+                downloaded = ' '.join([req.name for req in
+                                       requirement_set.successfully_downloaded])
+                if downloaded:
+                    logger.notify('Successfully downloaded %s' % downloaded)
+            elif self.bundle:
+                requirement_set.create_bundle(self.bundle_filename)
+                logger.notify('Created bundle in %s' % self.bundle_filename)
+        finally:
+            # Clean up
+            if (not options.no_clean) and ((not options.no_install) or options.download_dir):
+                requirement_set.cleanup_files(bundle=self.bundle)
+
         if options.target_dir:
             if not os.path.exists(options.target_dir):
                 os.makedirs(options.target_dir)
-            lib_dir = home_lib(temp_target_dir)
+            lib_dir = distutils_scheme('', home=temp_target_dir)['purelib']
             for item in os.listdir(lib_dir):
                 shutil.move(
                     os.path.join(lib_dir, item),

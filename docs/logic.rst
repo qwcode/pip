@@ -49,13 +49,18 @@ Requirement Specifiers
 pip supports installing from "requirement specifiers" as implemented in
 `pkg_resources Requirements <http://packages.python.org/distribute/pkg_resources.html#requirement-objects>`_
 
-Some Examples::
+Some Examples:
 
-  FooProject >= 1.2
+ ::
+
+  'FooProject >= 1.2'
   Fizzy [foo, bar]
-  PickyThing<1.6,>1.9,!=1.9.6,<2.0a0,==2.4c1
+  'PickyThing<1.6,>1.9,!=1.9.6,<2.0a0,==2.4c1'
   SomethingWhoseVersionIDontCareAbout
 
+.. note::
+
+  Use single or double quotes around specifiers to avoid ``>`` and ``<`` being interpreted as shell redirects. e.g. ``pip install 'FooProject>=1.2'``.
 
 .. _`Pre Release Versions`:
 
@@ -64,7 +69,7 @@ Pre-release Versions
 
 Starting with v1.4, pip will only install stable versions as specified by `PEP426`_ by default. If
 a version cannot be parsed as a compliant `PEP426`_ version then it is assumed
-to be stable.
+to be a pre-release.
 
 If a Requirement specifier includes a pre-release or development version (e.g. ``>=0.0.dev0``) then
 pip will allow pre-release and development versions for that requirement. This does not include
@@ -177,51 +182,6 @@ SSL Certificate Verification
 
 Starting with v1.3, pip provides SSL certificate verification over https, for the purpose
 of providing secure, certified downloads from PyPI.
-
-This is supported by default in all Python versions pip supports, except Python 2.5.
-
-Python 2.5 users can :ref:`install an SSL backport <SSL Backport>`, which provides ssl support for older pythons.
-Pip does not try to install this automatically because it requires a compiler, which not all systems will have.
-
-Although not recommended, Python 2.5 users who are unable to install ssl, can use the global option,
-``--insecure``, to allow access to PyPI w/o attempting SSL certificate verification. This option will only be visible
-when ssl is not importable.  This is *not* a general option.
-
-
-.. _`SSL Backport`:
-
-Installing the SSL Backport
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. warning::
-
-    We advise against using ``pip`` itself to install the ssl backport, because it won't be secure
-    until *after* installing ssl.  Likewise, `easy_install <http://pythonhosted.org/distribute/easy_install.html>`_ is not advised, because it
-    does not currently support ssl.
-
-
-1. Download the ssl archive:
-
-  * Using a Browser:
-
-    1. Go to `this url <https://pypi.python.org/pypi/ssl/1.15>`_.
-    2. Confirm the identity of the site is valid.
-       Most browsers provide this information to the left of the URL bar in the form of padlock icon that you can click on to confirm the site is verified.
-    3. Scroll down, and click to download ``ssl-1.15.tar.gz``.
-
-  * Using curl, which supports ssl certificate verification:
-     ::
-
-      $ curl -O https://pypi.python.org/packages/source/s/ssl/ssl-1.15.tar.gz
-
-2. Confirm the md5sum:
-   ::
-
-     $ md5sum ssl-1.15.tar.gz
-     81ea8a1175e437b4c769ae65b3290e0c  ssl-1.15.tar.gz
-
-3. Unpack the archive, and change into the ``ssl-1.15`` directory.
-4. Run: ``python setup.py install``.
 
 
 Hash Verification

@@ -55,7 +55,7 @@ Examples
 
   $ pip install SomePackage            # latest version
   $ pip install SomePackage==1.0.4     # specific version
-  $ pip install SomePackage>=1.0.4     # minimum version
+  $ pip install 'SomePackage>=1.0.4'     # minimum version
 
 
 2) Install a list of requirements specified in a file.  See the :ref:`Cookbook entry on Requirements files <Requirements Files>`.
@@ -220,6 +220,15 @@ Examples
   docutils==0.9.1
 
 
+2) Generate a requirements file and then install from it in another environment.
+
+ ::
+
+  $ env1/bin/pip freeze > requirements.txt
+  $ env2/bin/pip install -r requirements.txt
+
+
+
 pip list
 ---------
 
@@ -324,7 +333,7 @@ Description
 Options
 *******
 
-**Seach Options:**
+**Search Options:**
 
 .. pip-command-options:: search
 
@@ -374,7 +383,7 @@ Options
 Examples
 ********
 
-1. Build wheels for a requirement (and all it's dependencies), and then install
+1. Build wheels for a requirement (and all its dependencies), and then install
 
   ::
 
