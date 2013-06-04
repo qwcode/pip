@@ -4,7 +4,7 @@ from pip.index import (package_to_requirement, HTMLPage, get_mirrors,
         DEFAULT_MIRROR_HOSTNAME, PackageFinder, Link, InfLink, PageGetter,
         PageCache)
 from tests.lib import (reset_env, run_pip, pyversion, path_to_url,
-    assert_raises_regexp)
+                       assert_raises_regexp, find_links, tests_data)
 from string import ascii_lowercase
 from mock import patch
 import threading
