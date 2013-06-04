@@ -18,5 +18,6 @@ branches:
   only:
     - develop
     - 1.3.X
+    - ptone-charset-fix-no-dupes
 env:
   - PIP_USE_MIRRORS=true
