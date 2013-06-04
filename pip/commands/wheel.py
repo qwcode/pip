@@ -6,6 +6,7 @@ import sys
 from pip.basecommand import Command
 from pip.index import PackageFinder
 from pip.log import logger
+from pip.backwardcompat import wheel_skip_reqs
 from pip.exceptions import CommandError
 from pip.req import InstallRequirement, RequirementSet, parse_requirements
 from pip.util import normalize_path
@@ -50,12 +51,6 @@ class WheelCommand(Command):
             help="Build wheels into <dir>, where the default is '<cwd>/wheelhouse'.")
         cmd_opts.add_option(cmdoptions.use_wheel)
         cmd_opts.add_option(
-            '--unpack-only',
-            dest='unpack_only',
-            action='store_true',
-            default=False,
-            help="Only unpack packages into the build dir. Don't build wheels.")
-        cmd_opts.add_option(
             '--build-option',
             dest='build_options',
             metavar='options',
@@ -73,6 +68,8 @@ class WheelCommand(Command):
             metavar='options',
             help="Extra global options to be supplied to the setup.py "
             "call before the 'bdist_wheel' command.")
+
+        cmd_opts.add_option(cmdoptions.no_clean)
 
         index_opts = cmdoptions.make_option_group(cmdoptions.index_group, self.parser)
 
@@ -107,7 +104,8 @@ class WheelCommand(Command):
             download_dir=None,
             download_cache=options.download_cache,
             ignore_dependencies=options.ignore_dependencies,
-            ignore_installed=True)
+            ignore_installed=True,
+            skip_reqs=wheel_skip_reqs)
 
         #parse args and/or requirements files
         for name in args:
@@ -132,21 +130,17 @@ class WheelCommand(Command):
             logger.error(msg)
             return
 
-        #if unpack-only, just prepare and return
-        #'pip wheel' probably shouldn't be offering this? 'pip unpack'?
-        if options.unpack_only:
-            requirement_set.prepare_files(finder)
-            return
-
-        #build wheels
-        wb = WheelBuilder(
-            requirement_set,
-            finder,
-            options.wheel_dir,
-            build_options = options.build_options or [],
-            global_options = options.global_options or []
-            )
-        wb.build()
-
-        requirement_set.cleanup_files()
+        try:
+            #build wheels
+            wb = WheelBuilder(
+                requirement_set,
+                finder,
+                options.wheel_dir,
+                build_options = options.build_options or [],
+                global_options = options.global_options or []
+                )
+            wb.build()
+        finally:
+            if not options.no_clean:
+                requirement_set.cleanup_files()
 

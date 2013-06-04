@@ -10,7 +10,8 @@ import textwrap
 import zipfile
 
 from distutils.util import change_root
-from pip.locations import bin_py, running_under_virtualenv
+from pip.locations import (bin_py, running_under_virtualenv,PIP_DELETE_MARKER_FILENAME,
+                           write_delete_marker_file)
 from pip.exceptions import (InstallationError, UninstallationError,
                             BestVersionAlreadyInstalled,
                             DistributionNotFound, PreviousBuildDirError)
@@ -32,10 +33,6 @@ from pip.download import (get_file_content, is_url, url_to_path,
                           unpack_file_url, unpack_http_url)
 import pip.wheel
 from pip.wheel import move_wheel_files
-
-
-PIP_DELETE_MARKER_FILENAME = 'pip-delete-this-directory.txt'
-
 
 class InstallRequirement(object):
 
@@ -801,15 +798,6 @@ exec(compile(open(__file__).read().replace('\\r\\n', '\\n'), __file__, 'exec'))
         return os.path.join(self.source_dir, PIP_DELETE_MARKER_FILENAME)
 
 
-DELETE_MARKER_MESSAGE = '''\
-This file is placed here by pip to indicate the source was put
-here by pip.
-
-Once this package is successfully installed this source code will be
-deleted (unless you remove this file).
-'''
-
-
 class Requirements(object):
 
     def __init__(self):
@@ -842,7 +830,8 @@ class RequirementSet(object):
 
     def __init__(self, build_dir, src_dir, download_dir, download_cache=None,
                  upgrade=False, ignore_installed=False, as_egg=False, target_dir=None,
-                 ignore_dependencies=False, force_reinstall=False, use_user_site=False):
+                 ignore_dependencies=False, force_reinstall=False, use_user_site=False,
+                 skip_reqs={}):
         self.build_dir = build_dir
         self.src_dir = src_dir
         self.download_dir = download_dir
@@ -860,7 +849,10 @@ class RequirementSet(object):
         self.reqs_to_cleanup = []
         self.as_egg = as_egg
         self.use_user_site = use_user_site
-        self.target_dir = target_dir #set from --target option
+        # Set from --target option
+        self.target_dir = target_dir
+        # Requirements (by project name) to be skipped
+        self.skip_reqs = skip_reqs
 
     def __str__(self):
         reqs = [req for req in self.requirements.values()
@@ -870,6 +862,9 @@ class RequirementSet(object):
 
     def add_requirement(self, install_req):
         name = install_req.name
+        if name and name.lower() in self.skip_reqs:
+            logger.notify("Skipping %s: %s" %( name, self.skip_reqs[name.lower()]))
+            return False
         install_req.as_egg = self.as_egg
         install_req.use_user_site = self.use_user_site
         install_req.target_dir = self.target_dir
@@ -885,6 +880,7 @@ class RequirementSet(object):
             ## FIXME: what about other normalizations?  E.g., _ vs. -?
             if name.lower() != name:
                 self.requirement_aliases[name.lower()] = name
+        return True
 
     def has_requirement(self, project_name):
         for name in project_name, project_name.lower():
@@ -1090,8 +1086,8 @@ class RequirementSet(object):
                         if is_bundle:
                             req_to_install.move_bundle_files(self.build_dir, self.src_dir)
                             for subreq in req_to_install.bundle_requirements():
-                                reqs.append(subreq)
-                                self.add_requirement(subreq)
+                                if self.add_requirement(subreq):
+                                    reqs.append(subreq)
                         elif is_wheel:
                             req_to_install.source_dir = location
                             req_to_install.url = url.url
@@ -1105,8 +1101,8 @@ class RequirementSet(object):
                                         continue
                                     subreq = InstallRequirement(str(subreq),
                                                                 req_to_install)
-                                    reqs.append(subreq)
-                                    self.add_requirement(subreq)
+                                    if self.add_requirement(subreq):
+                                        reqs.append(subreq)
                         elif self.is_download:
                             req_to_install.source_dir = location
                             req_to_install.run_egg_info()
@@ -1153,8 +1149,8 @@ class RequirementSet(object):
                                 ## FIXME: check for conflict
                                 continue
                             subreq = InstallRequirement(req, req_to_install)
-                            reqs.append(subreq)
-                            self.add_requirement(subreq)
+                            if self.add_requirement(subreq):
+                                reqs.append(subreq)
                     if not self.has_requirement(req_to_install.name):
                         #'unnamed' requirements will get added here
                         self.add_requirement(req_to_install)
@@ -1220,7 +1216,7 @@ class RequirementSet(object):
                 self.download_cache = os.path.expanduser(self.download_cache)
             retval = unpack_http_url(link, location, self.download_cache, self.download_dir)
             if only_download:
-                _write_delete_marker_message(os.path.join(location, PIP_DELETE_MARKER_FILENAME))
+                write_delete_marker_file(location)
             return retval
 
     def install(self, install_options, global_options=(), *args, **kwargs):
@@ -1335,13 +1331,7 @@ class RequirementSet(object):
 
 def _make_build_dir(build_dir):
     os.makedirs(build_dir)
-    _write_delete_marker_message(os.path.join(build_dir, PIP_DELETE_MARKER_FILENAME))
-
-
-def _write_delete_marker_message(filepath):
-    marker_fp = open(filepath, 'w')
-    marker_fp.write(DELETE_MARKER_MESSAGE)
-    marker_fp.close()
+    write_delete_marker_file(build_dir)
 
 
 _scheme_re = re.compile(r'^(http|https|file):', re.I)
