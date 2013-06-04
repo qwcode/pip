@@ -18,5 +18,6 @@ branches:
   only:
     - develop
     - 1.3.X
+    - threaded-page-getting
 env:
   - PIP_USE_MIRRORS=true
