@@ -1,12 +1,15 @@
 # coding: utf-8
 import os
 from pip.backwardcompat import urllib, get_http_message_param
-from tests.lib.path import Path
-from pip.index import package_to_requirement, HTMLPage, get_mirrors, DEFAULT_MIRROR_HOSTNAME
-from pip.index import PackageFinder, Link, InfLink
-from tests.lib import reset_env, run_pip, pyversion, tests_data, path_to_url, find_links
+from pip.index import (package_to_requirement, HTMLPage, get_mirrors,
+        DEFAULT_MIRROR_HOSTNAME, PackageFinder, Link, InfLink, PageGetter,
+        PageCache)
+from tests.lib import (reset_env, run_pip, pyversion, path_to_url,
+                       assert_raises_regexp, find_links, tests_data)
 from string import ascii_lowercase
 from mock import patch, Mock
+import threading
+import time
 
 
 def test_package_name_should_be_converted_to_requirement():
@@ -189,3 +192,69 @@ def test_get_page_fallbacks_to_latin1_if_utf8_fails(get_http_message_param_mock,
     page = HTMLPage.get_page(Link(fake_url), None, cache=None)
 
     assert page.content == latin1_content_before
+
+def test_threaded_page_getter():
+    """
+    Test that page getting is done in a threaded fashion
+    """
+    thread_ids = set()
+
+    def mocked_get_page(self, link, req):
+        time.sleep(.1)
+        this_thread = threading.current_thread()
+        thread_ids.add(this_thread.ident)
+
+    with patch.object(PageGetter, '_get_page', mocked_get_page):
+        dummy_cache = PageCache()
+        getter = PageGetter(dummy_cache)
+        locations = ['http://foo%s.com' % i for i in range(15)]
+        result = getter.get_pages(locations, 'some-req')
+        # check that the page queue was emptied
+        assert getter._pending_queue.empty()
+
+    assert len(thread_ids) == 10
+
+
+def test_thread_reraise():
+    """
+    Test threaded page getter reraises unhandled exceptions in main thread
+    """
+    def mocked_get_page(self, link, req):
+        raise ValueError("ThreadError")
+
+    with patch.object(PageGetter, '_get_page', mocked_get_page):
+        dummy_cache = PageCache()
+        getter = PageGetter(dummy_cache)
+        locations = ['http://foo%s.com' % i for i in range(15)]
+        assert_raises_regexp(ValueError, 'ThreadError', getter.get_pages,
+                locations, 'some-req')
+
+
+def test_seen_pages():
+    """
+    Tests that PageGetter manages seen pages
+    """
+    gotten_pages = []
+
+    def mocked_get_page(self, link, req):
+        gotten_pages.append(link)
+        return HTMLPage('', link)
+
+    with patch.object(PageGetter, '_get_page', mocked_get_page):
+        dummy_cache = PageCache()
+        getter = PageGetter(dummy_cache)
+        locations = ['http://foo%s.com' % i for i in range(5)]
+        result = getter.get_pages(locations, 'some-req')
+        ct_pages_gotten = len(gotten_pages)
+        assert len(result) == ct_pages_gotten
+        # put seen locations into the work queue
+        for l in locations:
+            getter._pending_queue.put(l)
+        getter._pending_queue.join()
+        # check that the queue was in fact drained again
+        assert getter._pending_queue.empty()
+        # check that no seen pages were re-fetched
+        assert ct_pages_gotten == len(gotten_pages)
+        # confirm no pages were added to done list
+        assert len(getter._pages_done) == ct_pages_gotten
+
