@@ -18,5 +18,6 @@ branches:
   only:
     - develop
     - 1.3.X
+    - charset_threading
 env:
   - PIP_USE_MIRRORS=true
