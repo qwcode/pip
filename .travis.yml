@@ -18,5 +18,6 @@ branches:
   only:
     - develop
     - 1.3.X
+    - develop_before
 env:
   - PIP_USE_MIRRORS=true
