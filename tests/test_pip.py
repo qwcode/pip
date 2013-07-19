@@ -380,6 +380,9 @@ class TestPipEnvironment(TestFileEnvironment):
         # Install this version instead
         self.run('python', 'setup.py', 'install', cwd=src_folder, expect_stderr=True)
 
+        # upgrade setuptools
+        self.run('pip', 'install', '-U', 'setuptools')
+
         #create sitecustomize.py and add patches
         self._create_empty_sitecustomize()
         self._use_cached_pypi_server()
@@ -534,6 +537,10 @@ class FastTestPipEnvironment(TestPipEnvironment):
 
             # Install this version instead
             self.run('python', 'setup.py', 'install', cwd=src_folder, expect_stderr=True)
+
+            # upgrade setuptools
+            self.run('pip', 'install', '-U', 'setuptools')
+
             shutil.copytree(self.root_path, self.backup_path, True)
 
         #create sitecustomize.py and add patches
