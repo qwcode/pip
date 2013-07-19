@@ -58,7 +58,7 @@ def create_virtualenv(where, distribute=False):
     if sys.version_info[0] > 2:
         distribute = True
     virtualenv.create_environment(
-        where, use_distribute=distribute, unzip_setuptools=True)
+        where, unzip_setuptools=True)
 
     return virtualenv.path_locations(where)
 
