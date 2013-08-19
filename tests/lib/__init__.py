@@ -27,6 +27,7 @@ tests_unit = os.path.join(tests_root, 'unit') # pip/tests/unit
 tests_functional = os.path.join(tests_root, 'functional') # pip/tests/functional
 download_cache = tempfile.mkdtemp(prefix='pip-test-cache')
 site_packages_suffix = site.USER_SITE[len(site.USER_BASE) + 1:]
+tests_tmp = tempfile.mkdtemp()
 
 def path_to_url(path):
     """
@@ -140,7 +141,7 @@ def _cleanup():
     global env
     del env
     rmtree(download_cache, ignore_errors=True)
-    rmtree(fast_test_env_root, ignore_errors=True)
+    rmtree(tests_tmp, ignore_errors=True)
     rmtree(fast_test_env_backup, ignore_errors=True)
 
 atexit.register(_cleanup)
@@ -246,7 +247,6 @@ class TestPipResult(object):
                                   'unexpected content %f' % (pkg_dir, f))
 
 
-fast_test_env_root = tests_cache / 'test_ws'
 fast_test_env_backup = tests_cache / 'test_ws_backup'
 
 
@@ -282,7 +282,7 @@ class TestPipEnvironment(TestFileEnvironment):
     def __init__(self, environ=None, sitecustomize=None, pypi_cache=True):
         import virtualenv
 
-        self.root_path = fast_test_env_root
+        self.root_path = Path(tempfile.mkdtemp(dir=tests_tmp))
         self.backup_path = fast_test_env_backup
 
         self.scratch_path = self.root_path / self.scratch
@@ -328,10 +328,12 @@ class TestPipEnvironment(TestFileEnvironment):
         # put the test-scratch virtualenv's bin dir first on the PATH
         self.environ['PATH'] = Path.pathsep.join((self.bin_path, self.environ['PATH']))
 
-        if self.root_path.exists:
-            rmtree(self.root_path)
-        if self.backup_path.exists and not self.rebuild_venv:
-            shutil.copytree(self.backup_path, self.root_path, True)
+        #if self.root_path.exists:
+        #    rmtree(self.root_path)
+        #if self.backup_path.exists and not self.rebuild_venv:
+        #    shutil.copytree(self.backup_path, self.root_path, True)
+        if False:
+            pass
         else:
             demand_dirs(self.venv_path)
             demand_dirs(self.scratch_path)
