@@ -1149,6 +1149,7 @@ class RequirementSet(object):
                                 req_to_install.satisfied_by = None
                             else:
                                 install = False
+                        logger.notify("FALSE, OMG %s %s %s" % (req_to_install.satisfied_by, pkg_resources.working_set.entries, sys.path) )
                 if not (is_bundle or is_wheel):
                     ## FIXME: shouldn't be globally added:
                     finder.add_dependency_links(req_to_install.dependency_links)

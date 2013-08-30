@@ -67,13 +67,14 @@ class Tests_UserSite:
         """
         Test installing current directory ('.') into usersite
         """
+        assert False, sys.path
         virtualenv.system_site_packages = True
         run_from = data.packages.join("FSPkg")
         result = script.pip('install', '-vvv', '--user', curdir, cwd=run_from, expect_error=False)
         fspkg_folder = script.user_site/'fspkg'
         egg_info_folder = script.user_site/'FSPkg-0.1dev-py%s.egg-info' % pyversion
+        assert False, sys.path
         assert fspkg_folder in result.files_created, result.stdout
-
         assert egg_info_folder in result.files_created
 
     def test_install_user_venv_nositepkgs_fails(self, script, data):
