@@ -256,7 +256,6 @@ class InstallRequirement(object):
             call_subprocess(
                 egg_info_cmd + egg_base_option,
                 cwd=self.source_dir, filter_stdout=self._filter_install, show_stdout=False,
-                command_level=logger.VERBOSE_DEBUG,
                 command_desc='python setup.py egg_info')
         finally:
             logger.indent -= 2

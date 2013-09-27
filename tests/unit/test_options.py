@@ -75,6 +75,21 @@ class TestOptionPrecedence(object):
         options, args = main(['fake'])
         assert options.exists_action == ['s', 'w']
 
+    def test_env_alias_override_default(self):
+        """
+        Test that environment variable for a long option alias overrides the default.
+        (e.g. PIP_LOG_FILE, PIP_LOG, and PIP_LOCAL_LOG should all work)
+        """
+        os.environ['PIP_LOG_FILE'] = '/override'
+        options, args = main(['fake'])
+        assert options.log_file == '/override'
+        os.environ['PIP_LOG'] = '/override'
+        options, args = main(['fake'])
+        assert options.log_file == '/override'
+        os.environ['PIP_LOCAL_LOG'] = '/override'
+        options, args = main(['fake'])
+        assert options.log_file == '/override'
+
     def test_cli_override_environment(self):
         """
         Test the cli overrides and environment variable
@@ -167,7 +182,7 @@ class TestGeneralOptions(object):
     def test_log(self):
         options1, args1 = main(['--log', 'path', 'fake'])
         options2, args2 = main(['fake', '--log', 'path'])
-        assert options1.log == options2.log == 'path'
+        assert options1.log_file == options2.log_file == 'path'
 
     def test_log_explicit_levels(self):
         options1, args1 = main(['--log-explicit-levels', 'fake'])

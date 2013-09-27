@@ -59,7 +59,6 @@ class Logger(object):
     Logging object for use in command-line script.  Allows ranges of
     levels, to avoid some redundancy of displayed information.
     """
-    VERBOSE_DEBUG = logging.DEBUG - 1
     DEBUG = logging.DEBUG
     INFO = logging.INFO
     NOTIFY = (logging.INFO + logging.WARN) / 2
@@ -67,7 +66,11 @@ class Logger(object):
     ERROR = logging.ERROR
     FATAL = logging.FATAL
 
-    LEVELS = [VERBOSE_DEBUG, DEBUG, INFO, NOTIFY, WARN, ERROR, FATAL]
+    LEVEL_NAMES = ['DEBUG', 'INFO', 'NOTIFY',
+                   'WARN', 'ERROR', 'FATAL']
+
+    DEFAULT_LEVEL_NAME = 'NOTIFY'
+    DEFAULT_LOG_LEVEL_NAME = 'DEBUG'
 
     COLORS = {
         WARN: _color_wrap(colorama.Fore.YELLOW),
@@ -81,6 +84,7 @@ class Logger(object):
         self.explicit_levels = False
         self.in_progress = None
         self.in_progress_hanging = False
+        self.levels = [getattr(Logger, name) for name in self.LEVEL_NAMES]
 
     def add_consumers(self, *consumers):
         if sys.platform.startswith("win"):
@@ -130,6 +134,7 @@ class Logger(object):
             self.error(msg, *args, **kwargs)
 
     def log(self, level, msg, *args, **kw):
+        # WTF?
         if args:
             if kw:
                 raise TypeError(
@@ -142,9 +147,6 @@ class Logger(object):
         else:
             rendered = msg
         rendered = ' ' * self.indent + rendered
-        if self.explicit_levels:
-            ## FIXME: should this be a name, not a level number?
-            rendered = '%02i %s' % (level, rendered)
 
         for consumer_level, consumer in self.consumers:
             if self.level_matches(level, consumer_level):
@@ -256,14 +258,22 @@ class Logger(object):
         else:
             return level >= consumer_level
 
-    @classmethod
-    def level_for_integer(cls, level):
-        levels = cls.LEVELS
+    def level_for_integer(self, level):
+        levels = self.levels
         if level < 0:
             return levels[0]
         if level >= len(levels):
             return levels[-1]
         return levels[level]
+
+    def level_from_name(self, name):
+        #TODO throws exception
+        return getattr(self, name)
+
+    def name_from_level(self, level):
+        #TODO throws exception
+        level_index = self.levels.index(level)
+        return self.LEVEL_NAMES[level_index]
 
     def move_stdout_to_stderr(self):
         to_remove = []

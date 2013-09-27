@@ -80,17 +80,30 @@ class Command(object):
     def main(self, args):
         options, args = self.parse_args(args)
 
-        level = 1  # Notify
-        level += options.verbose
-        level -= options.quiet
-        level = logger.level_for_integer(4 - level)
-        complete_log = []
+        # console level
+        if options.level:
+            level = getattr(logger, options.level)
+        else:
+            default_level = logger.level_from_name(logger.DEFAULT_LEVEL_NAME)
+            level_index = logger.levels.index(default_level)
+            level_index -= options.verbose
+            level_index += options.quiet
+            level = logger.level_for_integer(level_index)
+
+        # log level
+        log_level = logger.level_from_name(options.log_level or logger.DEFAULT_LOG_LEVEL_NAME)
+
+        # log mode
+        log_mode = 'w'
+        if options.log_append:
+            log_mode = 'a'
+
+        log_fp = open_logfile(options.log_file, log_mode)
+        # TODO: log consumer needs to enforce timestamps/levels
         logger.add_consumers(
             (level, sys.stdout),
-            (logger.DEBUG, complete_log.append),
+            (log_level, log_fp)
         )
-        if options.log_explicit_levels:
-            logger.explicit_levels = True
 
         self.setup_logging()
 
@@ -109,14 +122,8 @@ class Command(object):
                 logger.fatal('Could not find an activated virtualenv (required).')
                 sys.exit(VIRTUALENV_NOT_FOUND)
 
-        if options.log:
-            log_fp = open_logfile(options.log, 'a')
-            logger.add_consumers((logger.DEBUG, log_fp))
-        else:
-            log_fp = None
 
         exit = SUCCESS
-        store_log = False
         try:
             status = self.run(options, args)
             # FIXME: all commands should return an exit status
@@ -127,19 +134,16 @@ class Command(object):
             e = sys.exc_info()[1]
             logger.fatal(str(e))
             logger.info('Exception information:\n%s' % format_exc())
-            store_log = True
             exit = PREVIOUS_BUILD_DIR_ERROR
         except (InstallationError, UninstallationError):
             e = sys.exc_info()[1]
             logger.fatal(str(e))
             logger.info('Exception information:\n%s' % format_exc())
-            store_log = True
             exit = ERROR
         except BadCommand:
             e = sys.exc_info()[1]
             logger.fatal(str(e))
             logger.info('Exception information:\n%s' % format_exc())
-            store_log = True
             exit = ERROR
         except CommandError:
             e = sys.exc_info()[1]
@@ -149,26 +153,12 @@ class Command(object):
         except KeyboardInterrupt:
             logger.fatal('Operation cancelled by user')
             logger.info('Exception information:\n%s' % format_exc())
-            store_log = True
             exit = ERROR
         except:
             logger.fatal('Exception:\n%s' % format_exc())
-            store_log = True
             exit = UNKNOWN_ERROR
-        if store_log:
-            log_file_fn = options.log_file
-            text = '\n'.join(complete_log)
-            try:
-                log_file_fp = open_logfile(log_file_fn, 'w')
-            except IOError:
-                temp = tempfile.NamedTemporaryFile(delete=False)
-                log_file_fn = temp.name
-                log_file_fp = open_logfile(log_file_fn, 'w')
-            logger.fatal('Storing complete log in %s' % log_file_fn)
-            log_file_fp.write(text)
-            log_file_fp.close()
-        if log_fp is not None:
-            log_fp.close()
+
+        log_fp.close()
         return exit
 
 
@@ -180,21 +170,15 @@ def format_exc(exc_info=None):
     return out.getvalue()
 
 
-def open_logfile(filename, mode='a'):
-    """Open the named log file in append mode.
-
-    If the file already exists, a separator will also be printed to
-    the file to separate past activity from current activity.
-    """
+def open_logfile(filename, mode):
+    """Open the log file; Write separator if mode=='a'"""
     filename = os.path.expanduser(filename)
     filename = os.path.abspath(filename)
     dirname = os.path.dirname(filename)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
     exists = os.path.exists(filename)
-
     log_fp = open(filename, mode)
-    if exists:
+    if exists and mode == 'a':
         log_fp.write('%s\n' % ('-' * 60))
-        log_fp.write('%s run on %s\n' % (sys.argv[0], time.strftime('%c')))
     return log_fp

@@ -10,6 +10,7 @@ To be consistent, all options will follow this design.
 import copy
 from optparse import OptionGroup, SUPPRESS_HELP, Option
 from pip.locations import build_prefix, default_log_file
+from pip.log import Logger
 
 
 def make_option_group(group, parser):
@@ -57,7 +58,7 @@ verbose = OptionMaker(
     dest='verbose',
     action='count',
     default=0,
-    help='Give more output. Option is additive, and can be used up to 3 times.')
+    help='DEPRECATED. Give more output in the console. Option is additive. Ignored if --level is specified.')
 
 version = OptionMaker(
     '-V', '--version',
@@ -70,28 +71,44 @@ quiet = OptionMaker(
     dest='quiet',
     action='count',
     default=0,
-    help='Give less output.')
+    help='DEPRECATED. Give less output in the console. Option is additive. Ignored if --level is specified.')
 
-log = OptionMaker(
-    '--log',
-    dest='log',
-    metavar='file',
-    help='Log file where a complete (maximum verbosity) record will be kept.')
+level = OptionMaker(
+    '--level',
+    dest='level',
+    metavar='level',
+    default=None,
+    help="The log level for the console. Defaults to %s. Choose from: %s. " % (Logger.DEFAULT_LEVEL_NAME, ', '.join(Logger.LEVEL_NAMES)))
 
+#TODO: all variations need to work as ENV var override
+log_file = OptionMaker(
+    '--log-file', '--log', '--local-log',
+    dest='log_file',
+    metavar='path',
+    default=default_log_file,
+    help='Path for the log file. Defaults to %default. Aliases include --log and --local-log.')
+
+log_level = OptionMaker(
+    '--log-level',
+    dest='log_level',
+    metavar='level',
+    default=None,
+    help="The log level for the log file. Defaults to %s. Choose from: %s. "  % (Logger.DEFAULT_LOG_LEVEL_NAME, ', '.join(Logger.LEVEL_NAMES)))
+
+log_append = OptionMaker(
+    '--log-append',
+    dest='log_append',
+    action='store_true',
+    default=False,
+    help='Whether the log file should append. Defaults to False.')
+
+# DEPRECATED; Does nothing now
 log_explicit_levels = OptionMaker(
     # Writes the log levels explicitely to the log'
     '--log-explicit-levels',
     dest='log_explicit_levels',
     action='store_true',
     default=False,
-    help=SUPPRESS_HELP)
-
-log_file = OptionMaker(
-    # The default log file
-    '--local-log', '--log-file',
-    dest='log_file',
-    metavar='file',
-    default=default_log_file,
     help=SUPPRESS_HELP)
 
 no_input = OptionMaker(
@@ -313,20 +330,22 @@ general_group = {
     'name': 'General Options',
     'options': [
         help_,
-        require_virtualenv,
-        verbose,
         version,
-        quiet,
-        log,
-        log_explicit_levels,
+        level,
         log_file,
+        log_level,
+        log_append,
+        log_explicit_levels,
         no_input,
         proxy,
         timeout,
         default_vcs,
+        require_virtualenv,
         skip_requirements_regex,
         exists_action,
         cert,
+        verbose,
+        quiet,
         ]
     }
 
