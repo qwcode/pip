@@ -270,7 +270,7 @@ class TestUpgradeSetuptools(object):
         result = self.script.run(self.ve_bin/'pip', 'list')
         "setuptools (0.9.6)" in result.stdout
         "distribute (0.7.3)" in result.stdout
-        result = self.script.run(self.ve_bin/'pip', 'install', '--no-index', '--find-links=%s' % data.find_links, '-U', 'setuptools')
+        result = self.script.run(self.ve_bin/'pip', 'install', '--no-index', '-vv', '--find-links=%s' % data.find_links, '-U', 'setuptools')
         assert "Found existing installation: setuptools 0.9.6" in result.stdout
         result = self.script.run(self.ve_bin/'pip', 'list')
         "setuptools (0.9.8)" in result.stdout

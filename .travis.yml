@@ -1,11 +1,6 @@
 language: python
 
 env:
-  - TOXENV=docs
-  - TOXENV=py26
-  - TOXENV=py27
-  - TOXENV=py32
-  - TOXENV=py33
   - TOXENV=pypy
 
 install:
@@ -29,6 +24,7 @@ branches:
     - 1.3.X
     - 1.4.X
     - 1.5.X
+    - test_upgrade
 
 notifications:
   irc: "irc.freenode.org#pip"
