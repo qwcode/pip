@@ -1,11 +1,11 @@
 Quickstart
 ==========
 
-Install a package:
+Install a package from PyPI:
 
 ::
 
-  $ pip install SomePackage==1.0
+  $ pip install SomePackage
     [...]
     Successfully installed SomePackage
 
