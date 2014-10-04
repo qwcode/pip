@@ -272,7 +272,7 @@ class InstallCommand(Command):
                 build_dir=options.build_dir,
                 src_dir=options.src_dir,
                 download_dir=options.download_dir,
-                upgrade=options.upgrade,
+                upgrade_eager=options.upgrade,
                 as_egg=options.as_egg,
                 ignore_installed=options.ignore_installed,
                 ignore_dependencies=options.ignore_dependencies,
@@ -284,7 +284,12 @@ class InstallCommand(Command):
             )
             for name in args:
                 requirement_set.add_requirement(
-                    InstallRequirement.from_line(name, None))
+                    InstallRequirement.from_line(
+                        name,
+                        None,
+                        upgrade=options.upgrade
+                    )
+                )
             for name in options.editables:
                 requirement_set.add_requirement(
                     InstallRequirement.from_editable(
@@ -295,7 +300,8 @@ class InstallCommand(Command):
             for filename in options.requirements:
                 for req in parse_requirements(
                         filename,
-                        finder=finder, options=options, session=session):
+                        finder=finder, options=options, session=session,
+                        upgrade=False):
                     requirement_set.add_requirement(req)
             if not requirement_set.has_requirements:
                 opts = {'name': self.name}

@@ -13,7 +13,7 @@ _scheme_re = re.compile(r'^(http|https|file):', re.I)
 
 
 def parse_requirements(filename, finder=None, comes_from=None, options=None,
-                       session=None):
+                       session=None, upgrade=False):
     if session is None:
         raise TypeError(
             "parse_requirements() missing 1 required keyword argument: "
@@ -131,6 +131,7 @@ def parse_requirements(filename, finder=None, comes_from=None, options=None,
                 req = InstallRequirement.from_line(
                     line,
                     comes_from,
-                    prereleases=getattr(options, "pre", None)
+                    prereleases=getattr(options, "pre", None),
+                    upgrade=upgrade
                 )
             yield req

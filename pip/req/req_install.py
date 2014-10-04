@@ -45,7 +45,7 @@ class InstallRequirement(object):
 
     def __init__(self, req, comes_from, source_dir=None, editable=False,
                  url=None, as_egg=False, update=True, prereleases=None,
-                 editable_options=None, pycompile=True):
+                 editable_options=None, pycompile=True, upgrade=False):
         self.extras = ()
         if isinstance(req, six.string_types):
             req = pkg_resources.Requirement.parse(req)
@@ -77,7 +77,7 @@ class InstallRequirement(object):
         self.uninstalled = None
         self.use_user_site = False
         self.target_dir = None
-
+        self.upgrade = upgrade
         self.pycompile = pycompile
 
         # True if pre-releases are acceptable
@@ -110,7 +110,7 @@ class InstallRequirement(object):
         return res
 
     @classmethod
-    def from_line(cls, name, comes_from=None, prereleases=None):
+    def from_line(cls, name, comes_from=None, prereleases=None, upgrade=False):
         """Creates an InstallRequirement from a name, which might be a
         requirement, directory containing 'setup.py', filename, or URL.
         """
@@ -165,7 +165,7 @@ class InstallRequirement(object):
         else:
             req = name
 
-        return cls(req, comes_from, url=url, prereleases=prereleases)
+        return cls(req, comes_from, url=url, prereleases=prereleases, upgrade=upgrade)
 
     def __str__(self):
         if self.req:

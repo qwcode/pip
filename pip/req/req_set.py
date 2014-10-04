@@ -53,7 +53,7 @@ class Requirements(object):
 
 class RequirementSet(object):
 
-    def __init__(self, build_dir, src_dir, download_dir, upgrade=False,
+    def __init__(self, build_dir, src_dir, download_dir, upgrade_eager=False,
                  ignore_installed=False, as_egg=False, target_dir=None,
                  ignore_dependencies=False, force_reinstall=False,
                  use_user_site=False, session=None, pycompile=True,
@@ -67,7 +67,7 @@ class RequirementSet(object):
         self.build_dir = build_dir
         self.src_dir = src_dir
         self.download_dir = download_dir
-        self.upgrade = upgrade
+        self.upgrade_eager = upgrade_eager
         self.ignore_installed = ignore_installed
         self.force_reinstall = force_reinstall
         self.requirements = Requirements()
@@ -170,7 +170,7 @@ class RequirementSet(object):
             if not self.ignore_installed and not req_to_install.editable:
                 req_to_install.check_if_exists()
                 if req_to_install.satisfied_by:
-                    if self.upgrade:
+                    if req_to_install.upgrade:
                         # don't uninstall conflict if user install and
                         # conflict is not user install
                         if not (self.use_user_site
@@ -184,7 +184,7 @@ class RequirementSet(object):
                         install_needed = False
                 if req_to_install.satisfied_by:
                     logger.info(
-                        'Requirement already satisfied (use --upgrade to '
+                        'Requirement already satisfied (use "pip upgrade" to '
                         'upgrade): %s',
                         req_to_install,
                     )
@@ -231,11 +231,11 @@ class RequirementSet(object):
             if not self.ignore_installed and not req_to_install.editable:
                 req_to_install.check_if_exists()
                 if req_to_install.satisfied_by:
-                    if self.upgrade:
+                    if req_to_install.upgrade:
                         if not self.force_reinstall and not req_to_install.url:
                             try:
                                 url = finder.find_requirement(
-                                    req_to_install, self.upgrade)
+                                    req_to_install, req_to_install.upgrade)
                             except BestVersionAlreadyInstalled:
                                 best_installed = True
                                 install = False
@@ -336,7 +336,7 @@ class RequirementSet(object):
                                 raise not_found
                             url = finder.find_requirement(
                                 req_to_install,
-                                upgrade=self.upgrade,
+                                upgrade=req_to_install.upgrade,
                             )
                         else:
                             # FIXME: should req_to_install.url already be a
@@ -396,7 +396,7 @@ class RequirementSet(object):
                         if not self.ignore_installed:
                             req_to_install.check_if_exists()
                         if req_to_install.satisfied_by:
-                            if self.upgrade or self.ignore_installed:
+                            if req_to_install.upgrade or self.ignore_installed:
                                 # don't uninstall conflict if user install and
                                 # conflict is not user install
                                 if not (self.use_user_site
@@ -408,7 +408,7 @@ class RequirementSet(object):
                             else:
                                 logger.info(
                                     'Requirement already satisfied (use '
-                                    '--upgrade to upgrade): %s',
+                                    '"pip upgrade" to upgrade): %s',
                                     req_to_install,
                                 )
                                 install = False
@@ -431,7 +431,8 @@ class RequirementSet(object):
                                     subreq.project_name):
                                 continue
                             subreq = InstallRequirement(str(subreq),
-                                                        req_to_install)
+                                                        req_to_install,
+                                                        upgrade=self.upgrade_eager)
                             reqs.append(subreq)
                             self.add_requirement(subreq)
 
@@ -464,7 +465,9 @@ class RequirementSet(object):
                             if self.has_requirement(name):
                                 # FIXME: check for conflict
                                 continue
-                            subreq = InstallRequirement(req, req_to_install)
+                            subreq = InstallRequirement(req,
+                                                        req_to_install,
+                                                        upgrade=self.upgrade_eager)
                             reqs.append(subreq)
                             self.add_requirement(subreq)
                     if not self.has_requirement(req_to_install.name):
