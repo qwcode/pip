@@ -169,6 +169,7 @@ class RequirementSet(object):
             install_needed = True
             if not self.ignore_installed and not req_to_install.editable:
                 req_to_install.check_if_exists()
+                req_to_install.check_user_install_hidden(self.upgrade)
                 if req_to_install.satisfied_by:
                     if self.upgrade:
                         # don't uninstall conflict if user install and
@@ -230,6 +231,7 @@ class RequirementSet(object):
 
             if not self.ignore_installed and not req_to_install.editable:
                 req_to_install.check_if_exists()
+                req_to_install.check_user_install_hidden(self.upgrade)
                 if req_to_install.satisfied_by:
                     if self.upgrade:
                         if not self.force_reinstall and not req_to_install.url:

@@ -886,6 +886,7 @@ exec(compile(
                 break
         return (level, line)
 
+
     def check_if_exists(self):
         """Find an installed distribution that satisfies or conflicts
         with this requirement, and set self.satisfied_by or
@@ -908,22 +909,32 @@ exec(compile(
         except pkg_resources.DistributionNotFound:
             return False
         except pkg_resources.VersionConflict:
-            existing_dist = pkg_resources.get_distribution(
+            self.conflicts_with = pkg_resources.get_distribution(
                 self.req.project_name
             )
-            if self.use_user_site:
-                if dist_in_usersite(existing_dist):
-                    self.conflicts_with = existing_dist
-                elif (running_under_virtualenv()
-                        and dist_in_site_packages(existing_dist)):
-                    raise InstallationError(
-                        "Will not install to the user site because it will "
-                        "lack sys.path precedence to %s in %s" %
-                        (existing_dist.project_name, existing_dist.location)
-                    )
-            else:
-                self.conflicts_with = existing_dist
+
         return True
+
+
+    def check_user_install(self, upgrade):
+        """Check if a --user install will be hidden, and fail, if true.  This can occur
+        in `--system-site-packages` virtualenv's when the --user install would
+        conflict with what's installed in the virtualenv.
+        TODO: deal with global case too!!!
+        """
+        if (self.use_user_site and running_under_virtualenv()):
+            if (
+                    (self.satisfield_by and upgrade and
+                     dist_in_site_packages(self.satisfield_by)
+                     or
+                    (self.conflicts_with and
+                     dist_in_site_packages(self.conflicts_with)
+                 ):
+                     raise InstallationError(
+                         "Will not install to the user site because it will "
+                         "lack sys.path precedence to %s in %s" %
+                         (existing_dist.project_name, existing_dist.location)
+                     )
 
     @property
     def is_wheel(self):

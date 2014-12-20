@@ -261,7 +261,7 @@ class Tests_UserSite:
             self, script, virtualenv):
         """
         Test user install in --system-site-packages virtualenv with conflict in
-        site fails.
+        site fails, with a versioned requirement (e.g. "INITools==0.1")
         """
         virtualenv.system_site_packages = True
 
@@ -282,3 +282,38 @@ class Tests_UserSite:
             "precedence to %s in %s" %
             ('INITools', dist_location) in result2.stdout
         ), result2.stdout
+
+
+    def test_install_user_no_version_in_global_virtualenv_with_conflict_fails(
+            self, script, virtualenv):
+        """
+        Test user install in --system-site-packages virtualenv with conflict in
+        site fails, with a non-versioned name-only requirement
+        (e.g. "INITools")
+        """
+        virtualenv.system_site_packages = True
+
+        script.pip('install', 'INITools==0.2')
+
+        result2 = script.pip(
+            'install', '--user', 'INITools',
+            expect_error=True,
+        )
+        resultp = script.run(
+            'python', '-c',
+            "import pkg_resources; print(pkg_resources.get_distribution"
+            "('initools').location)",
+        )
+        dist_location = resultp.stdout.strip()
+        assert (
+            "Will not install to the user site because it will lack sys.path "
+            "precedence to %s in %s" %
+            ('INITools', dist_location) in result2.stdout
+        ), result2.stdout
+
+
+# tests
+#  upgrade
+#  specific requirement
+#  global vs virtualenv conflict
+
