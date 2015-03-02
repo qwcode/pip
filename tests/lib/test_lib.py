@@ -5,7 +5,14 @@ import filecmp
 import re
 from os.path import join, isdir
 
-from tests.lib import SRC_DIR
+from tests.lib import (SRC_DIR, ProjectNotInstalledError, VersionConflictError,
+                       DistInfoExpectedError, EggInfoExpectedError,
+                       UserInstallExpectedError, UserInstallUnexpectedError,
+                       EditableInstallExpectedError, PackageExpectedrror,
+                       PathExpectedrror, PathNotExpectedrror,
+                       PthUpdateNotExpected)
+
+import pytest
 
 
 def test_tmp_dir_exists_in_env(script):
@@ -60,3 +67,42 @@ def test_as_import(script):
     """
     import pip.commands.install as inst
     assert inst is not None
+
+
+class TestAssertInstalled(object):
+
+    def test_install(self, script, data):
+        result = script.pip(
+            'install', '-f', data.find_links, '--no-index', 'simple==1.0'
+        )
+        result.assert_installed('simple==1.0')
+
+    def test_user_install(self, script, data, virtualenv):
+        virtualenv.system_site_packages = True
+        result = script.pip(
+            'install', '--user', '-f', data.find_links, '--no-index', 'simple==1.0'
+        )
+        result.assert_installed('simple==1.0', user_install=True)
+
+    def test_user_install_expected(self, script, data, virtualenv):
+        virtualenv.system_site_packages = True
+        result = script.pip(
+            'install', '-f', data.find_links, '--no-index', 'simple==1.0'
+        )
+        with pytest.raises(UserInstallExpectedError):
+            result.assert_installed('simple==1.0', user_install=True)
+
+    def test_user_install_unexpected(self, script, data, virtualenv):
+        virtualenv.system_site_packages = True
+        result = script.pip(
+            'install', '--user', '-f', data.find_links, '--no-index', 'simple==1.0'
+        )
+        with pytest.raises(UserInstallUnexpectedError):
+            result.assert_installed('simple==1.0')
+
+    def test_install_dist_info_expected(self, script, data):
+        result = script.pip(
+            'install', '-f', data.find_links, '--no-index', 'simple==1.0'
+        )
+        with pytest.raises(DistInfoExpectedError):
+            result.assert_installed('simple==1.0', dist_info=True)
