@@ -9,7 +9,9 @@ import site
 import scripttest
 import virtualenv
 
-from tests.lib.path import Path, curdir, u
+from pip._vendor import pkg_resources
+from pip.utils import normalize_path, dist_is_editable
+from tests.lib.path import Path
 
 DATA_DIR = Path(__file__).folder.folder.join("data").abspath
 SRC_DIR = Path(__file__).abspath.folder.folder.folder
@@ -105,7 +107,52 @@ class TestFailure(AssertionError):
     pass
 
 
+class ProjectNotInstalledError(AssertionError):
+    """Raised when project not installed"""
+
+
+class VersionConflictError(AssertionError):
+    """Raised when a conflicting version is present"""
+
+
+class DistInfoExpectedError(AssertionError):
+    """Raised when a dist-info install is expected but not present"""
+
+
+class EggInfoExpectedError(AssertionError):
+    """Raised when a egg-info install is expected but not present"""
+
+
+class UserInstallExpectedError(AssertionError):
+    """Raised when a user install is expected but not present"""
+
+
+class UserInstallUnexpectedError(AssertionError):
+    """Raised when a user install is unexpected but present"""
+
+
+class EditableInstallExpectedError(AssertionError):
+    """Raised when an editable install is expected but not present"""
+
+
+class PackageExpectedrror(AssertionError):
+    """Raised when an import package is expected but not present"""
+
+
+class PathExpectedrror(AssertionError):
+    """Raised when a path is expected to be intalled but not present"""
+
+
+class PathNotExpectedrror(AssertionError):
+    """Raised when a path is not expected to be intalled but is present"""
+
+
+class PthUpdateNotExpected(AssertionError):
+    """Raised when easy-intall.pth is unexpectedly updated"""
+
+
 class TestPipResult(object):
+    """Return object from PipTestEnvironment.run"""
 
     def __init__(self, impl, verbose=False):
         self._impl = impl
@@ -138,86 +185,93 @@ class TestPipResult(object):
         def __str__(self):
             return str(self._impl)
 
-    def assert_installed(self, pkg_name, editable=True, with_files=[],
-                         without_files=[], without_egg_link=False,
-                         use_user_site=False, sub_dir=False):
-        e = self.test_env
+    # def assert_installed(self, pkg_name, editable=True, with_files=[],
+    #                      without_files=[], without_egg_link=False,
+    #                      use_user_site=False, sub_dir=False):
+    def assert_installed(self, spec, package=None, editable=False,
+                         user_install=False, dist_info=False, egg_info=False,
+                         with_paths=[], without_paths=[]):
+        """Assert that a requirement specifier is fulfilled, i.e that a project
+        with a certain version specifier (or no specifier) is installed.
 
-        if editable:
-            pkg_dir = e.venv / 'src' / pkg_name.lower()
-            # If package was installed in a sub directory
-            if sub_dir:
-                pkg_dir = pkg_dir / sub_dir
-        else:
-            without_egg_link = True
-            pkg_dir = e.site_packages / pkg_name
+        Custom exceptions are used for the sake of testing.
 
-        if use_user_site:
-            egg_link_path = e.user_site / pkg_name + '.egg-link'
-        else:
-            egg_link_path = e.site_packages / pkg_name + '.egg-link'
+        :param spec: project specifier (e.g. 'pip', or 'pip==1.6.0')
+        :param package: an import package to confirm is present
+        :param editable: confirm install is editable
+        :param user_install: confirm as a user install
+        :param dist_info: confirm as a dist-info install
+        :param egg_info: confirm as a egg-info install
+        :param with_paths: paths to confirm were installed
+        :param without_paths: paths to confirm were not installed
 
-        if without_egg_link:
-            if egg_link_path in self.files_created:
-                raise TestFailure(
-                    'unexpected egg link file created: %r\n%s' %
-                    (egg_link_path, self)
-                )
-        else:
-            if egg_link_path not in self.files_created:
-                raise TestFailure(
-                    'expected egg link file missing: %r\n%s' %
-                    (egg_link_path, self)
-                )
+        """
 
-            egg_link_file = self.files_created[egg_link_path]
+        env = self.test_env
 
-            # FIXME: I don't understand why there's a trailing . here
-            if not (egg_link_file.bytes.endswith('\n.')
-                    and egg_link_file.bytes[:-2].endswith(pkg_dir)):
-                raise TestFailure(textwrap.dedent(u('''\
-                    Incorrect egg_link file %r
-                    Expected ending: %r
-                    ------- Actual contents -------
-                    %s
-                    -------------------------------''' % (
-                    egg_link_file,
-                    pkg_dir + '\n.',
-                    repr(egg_link_file.bytes))
-                )))
+        # create working set
+        working_set = pkg_resources.WorkingSet([
+            env.user_site_path,
+            env.site_packages_path])
 
-        if use_user_site:
-            pth_file = e.user_site / 'easy-install.pth'
-        else:
-            pth_file = e.site_packages / 'easy-install.pth'
+        # confirm spec is fulfilled
+        req = pkg_resources.Requirement.parse(spec)
+        try:
+            installed_dist = working_set.find(req)
+        except pkg_resources.VersionConflict as e:
+            raise VersionConflictError(e)
+        if installed_dist is None:
+            raise ProjectNotInstalledError()
 
-        if (pth_file in self.files_updated) == without_egg_link:
-            raise TestFailure('%r unexpectedly %supdated by install' % (
-                pth_file, (not without_egg_link and 'not ' or '')))
+        install_location = normalize_path(installed_dist.location)
+        is_user_install = install_location.startswith(
+            normalize_path(env.user_site_path))
 
-        if (pkg_dir in self.files_created) == (curdir in without_files):
-            raise TestFailure(textwrap.dedent('''\
-            expected package directory %r %sto be created
-            actually created:
-            %s
-            ''') % (
-                pkg_dir,
-                (curdir in without_files and 'not ' or ''),
-                sorted(self.files_created.keys())))
+        # confirm user install
+        if user_install and not is_user_install:
+                raise UserInstallExpectedError()
 
-        for f in with_files:
-            if not (pkg_dir / f).normpath in self.files_created:
-                raise TestFailure(
-                    'Package directory %r missing expected content %r' %
-                    (pkg_dir, f)
-                )
+        # confirm normal site install
+        if not user_install and is_user_install:
+                raise UserInstallUnexpectedError()
 
-        for f in without_files:
-            if (pkg_dir / f).normpath in self.files_created:
-                raise TestFailure(
-                    'Package directory %r has unexpected content %f' %
-                    (pkg_dir, f)
-                )
+        # confirm editable or not
+        is_editable = dist_is_editable(installed_dist)
+        if editable and not is_editable:
+            raise EditableInstallExpectedError()
+
+        # confirm a certain package is present
+        if package:
+            package_path = os.path.join(install_location, package)
+            if not os.path.exists(package_path):
+                PackageExpectedrror()
+
+        is_dist_info = (type(installed_dist) == pkg_resources.DistInfoDistribution)
+
+        # confirm dist-info
+        if dist_info and not is_dist_info:
+            raise DistInfoExpectedError()
+
+        # confirm egg-info
+        if egg_info and is_dist_info:
+            raise EggInfoExpectedError()
+
+        # with_paths
+        for p in with_paths:
+            install_path = normalize_path(install_location, p)
+            if install_path not in self.files_created:
+                raise PathExpectedrror()
+
+        # without_paths
+        for p in without_paths:
+            install_path = normalize_path(install_location, p)
+            if install_path in self.files_created:
+                raise PathNotExpectedrror()
+
+        # confirm unexpected pth update
+        pth_file = os.path.join(install_location, 'easy-install.pth')
+        if not editable and pth_file in self.files_updated:
+            raise PthUpdateNotExpected()
 
 
 class PipTestEnvironment(scripttest.TestFileEnvironment):
@@ -303,6 +357,7 @@ class PipTestEnvironment(scripttest.TestFileEnvironment):
         #   instead of created
         self.user_site_path.makedirs()
         self.user_site_path.join("easy-install.pth").touch()
+
 
     def _ignore_file(self, fn):
         if fn.endswith('__pycache__') or fn.endswith(".pyc"):
