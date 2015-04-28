@@ -8,7 +8,7 @@ from os.path import join, isdir
 from tests.lib import (SRC_DIR, ProjectNotInstalledError, VersionConflictError,
                        DistInfoExpectedError, EggInfoExpectedError,
                        UserInstallExpectedError, UserInstallUnexpectedError,
-                       EditableInstallExpectedError, PackageExpectedrror,
+                       EditableInstallExpectedError, PackageExpectedError,
                        PathExpectedrror, PathNotExpectedrror,
                        PthUpdateNotExpected)
 
@@ -71,11 +71,23 @@ def test_as_import(script):
 
 class TestAssertInstalled(object):
 
-    def test_install(self, script, data):
+    def test_install_sdist(self, script, data):
         result = script.pip(
             'install', '-f', data.find_links, '--no-index', 'simple==1.0'
         )
         result.assert_installed('simple==1.0')
+
+    def test_install_wheel(self, script, data):
+        result = script.pip(
+            'install', '-f', data.find_links, '--no-index', 'simplewheel==1.0'
+        )
+        result.assert_installed('simplewheel==1.0', dist_info=True)
+
+    def test_install_no_version(self, script, data):
+        result = script.pip(
+            'install', '-f', data.find_links, '--no-index', 'simple==1.0'
+        )
+        result.assert_installed('simple')
 
     def test_user_install(self, script, data, virtualenv):
         virtualenv.system_site_packages = True
@@ -100,9 +112,23 @@ class TestAssertInstalled(object):
         with pytest.raises(UserInstallUnexpectedError):
             result.assert_installed('simple==1.0')
 
+    def test_editable_install(self, script, data, virtualenv):
+        pkg_path = data.packages.join('FSPkg')
+        result = script.pip(
+            'install', '-e', pkg_path
+        )
+        result.assert_installed('FSPkg', editable=True)
+
     def test_install_dist_info_expected(self, script, data):
         result = script.pip(
             'install', '-f', data.find_links, '--no-index', 'simple==1.0'
         )
         with pytest.raises(DistInfoExpectedError):
             result.assert_installed('simple==1.0', dist_info=True)
+
+    def test_install_egg_info_expected(self, script, data):
+        result = script.pip(
+            'install', '-f', data.find_links, '--no-index', 'simplewheel==1.0'
+        )
+        with pytest.raises(EggInfoExpectedError):
+            result.assert_installed('simplewheel==1.0', egg_info=True)

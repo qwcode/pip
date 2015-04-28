@@ -98,6 +98,8 @@ class ListCommand(Command):
             self.run_editables(options)
         else:
             self.run_listing(options)
+        logger.info("yo")
+        logger.info(args.exists_action)
 
     def run_outdated(self, options):
         for dist, version in self.find_packages_latests_versions(options):

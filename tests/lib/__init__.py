@@ -107,50 +107,6 @@ class TestFailure(AssertionError):
     pass
 
 
-class ProjectNotInstalledError(AssertionError):
-    """Raised when project not installed"""
-
-
-class VersionConflictError(AssertionError):
-    """Raised when a conflicting version is present"""
-
-
-class DistInfoExpectedError(AssertionError):
-    """Raised when a dist-info install is expected but not present"""
-
-
-class EggInfoExpectedError(AssertionError):
-    """Raised when a egg-info install is expected but not present"""
-
-
-class UserInstallExpectedError(AssertionError):
-    """Raised when a user install is expected but not present"""
-
-
-class UserInstallUnexpectedError(AssertionError):
-    """Raised when a user install is unexpected but present"""
-
-
-class EditableInstallExpectedError(AssertionError):
-    """Raised when an editable install is expected but not present"""
-
-
-class PackageExpectedrror(AssertionError):
-    """Raised when an import package is expected but not present"""
-
-
-class PathExpectedrror(AssertionError):
-    """Raised when a path is expected to be intalled but not present"""
-
-
-class PathNotExpectedrror(AssertionError):
-    """Raised when a path is not expected to be intalled but is present"""
-
-
-class PthUpdateNotExpected(AssertionError):
-    """Raised when easy-intall.pth is unexpectedly updated"""
-
-
 class TestPipResult(object):
     """Return object from PipTestEnvironment.run"""
 
@@ -196,7 +152,7 @@ class TestPipResult(object):
 
         Custom exceptions are used for the sake of testing.
 
-        :param spec: project specifier (e.g. 'pip', or 'pip==1.6.0')
+        :param spec: requirement specifier (e.g. 'pip', or 'pip==1.6.0')
         :param package: an import package to confirm is present
         :param editable: confirm install is editable
         :param user_install: confirm as a user install
@@ -209,69 +165,23 @@ class TestPipResult(object):
 
         env = self.test_env
 
-        # create working set
-        working_set = pkg_resources.WorkingSet([
-            env.user_site_path,
-            env.site_packages_path])
-
-        # confirm spec is fulfilled
-        req = pkg_resources.Requirement.parse(spec)
-        try:
-            installed_dist = working_set.find(req)
-        except pkg_resources.VersionConflict as e:
-            raise VersionConflictError(e)
-        if installed_dist is None:
-            raise ProjectNotInstalledError()
-
-        install_location = normalize_path(installed_dist.location)
-        is_user_install = install_location.startswith(
-            normalize_path(env.user_site_path))
-
-        # confirm user install
-        if user_install and not is_user_install:
-                raise UserInstallExpectedError()
-
-        # confirm normal site install
-        if not user_install and is_user_install:
-                raise UserInstallUnexpectedError()
-
-        # confirm editable or not
-        is_editable = dist_is_editable(installed_dist)
-        if editable and not is_editable:
-            raise EditableInstallExpectedError()
-
-        # confirm a certain package is present
-        if package:
-            package_path = os.path.join(install_location, package)
-            if not os.path.exists(package_path):
-                PackageExpectedrror()
-
-        is_dist_info = (type(installed_dist) == pkg_resources.DistInfoDistribution)
-
-        # confirm dist-info
-        if dist_info and not is_dist_info:
-            raise DistInfoExpectedError()
-
-        # confirm egg-info
-        if egg_info and is_dist_info:
-            raise EggInfoExpectedError()
 
         # with_paths
         for p in with_paths:
             install_path = normalize_path(install_location, p)
             if install_path not in self.files_created:
-                raise PathExpectedrror()
+                raise PathExpectedrror(self)
 
         # without_paths
         for p in without_paths:
             install_path = normalize_path(install_location, p)
             if install_path in self.files_created:
-                raise PathNotExpectedrror()
+                raise PathNotExpectedrror(self)
 
         # confirm unexpected pth update
         pth_file = os.path.join(install_location, 'easy-install.pth')
         if not editable and pth_file in self.files_updated:
-            raise PthUpdateNotExpected()
+            raise PthUpdateNotExpected(self)
 
 
 class PipTestEnvironment(scripttest.TestFileEnvironment):
