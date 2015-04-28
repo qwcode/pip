@@ -370,10 +370,6 @@ class PipSession(requests.Session):
 def get_file_content(url, comes_from=None, session=None):
     """Gets the content of a file; it may be a filename, file: URL, or
     http: URL.  Returns (location, content).  Content is unicode."""
-    if session is None:
-        raise TypeError(
-            "get_file_content() missing 1 required keyword argument: 'session'"
-        )
 
     match = _scheme_re.search(url)
     if match:
@@ -394,6 +390,11 @@ def get_file_content(url, comes_from=None, session=None):
                 path = '/' + path.lstrip('/')
             url = path
         else:
+            if session is None:
+                raise TypeError(
+                    "get_file_content() requires a session to get non-file "
+                    "urls"
+                )
             # FIXME: catch some errors
             resp = session.get(url)
             resp.raise_for_status()
