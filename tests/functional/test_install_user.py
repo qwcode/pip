@@ -273,12 +273,12 @@ class Tests_UserSite:
         virtualenv.system_site_packages = True
 
         r1 = script.pip('install', 'INITools==0.2')
-        assert False, str(r1)
 
         result2 = script.pip(
             'install', '--user', 'INITools==0.1',
             expect_error=True,
         )
+        assert False, str(result2)
         resultp = script.run(
             'python', '-c',
             "import pkg_resources; print(pkg_resources.get_distribution"
