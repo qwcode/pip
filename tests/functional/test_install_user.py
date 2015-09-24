@@ -278,7 +278,6 @@ class Tests_UserSite:
             'install', '--user', 'INITools==0.1',
             expect_error=True,
         )
-        assert False, str(result2)
         resultp = script.run(
             'python', '-c',
             "import pkg_resources; print(pkg_resources.get_distribution"
